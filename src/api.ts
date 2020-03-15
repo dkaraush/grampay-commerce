@@ -164,7 +164,7 @@ export default (
                 amount_grm:   grmWithFee,
                 price_usd:    usd,
                 price_grm:    grm,
-                address:      "address",
+                address:      "EQCMVuNax7q7hhDmaoRqaQpPjELKXasf8CG6NUbhxAFgDr8Y",
                 privkey:      "private-key",
                 opened_time:  unix()
             })
@@ -422,7 +422,7 @@ export default (
             if (!chat.isOnline(order.id, true)) {
                 bot.sendMessage(buyer.telegram_id, TEXTS.confirmNotification({
                     from_name: seller.title,
-                    order_token: buyer.token,
+                    order_token: order.buyer_token,
                     order_id: order.id
                 }), {parse_mode: "HTML"});
             }
