@@ -1,0 +1,56 @@
+{
+  "name": "grampay-commerce",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node --files src/",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dkaraush/grampay-commerce.git"
+  },
+  "keywords": [
+    "nodejs",
+    "grampay",
+    "ton",
+    "gram",
+    "blockchain",
+    "commerce",
+    "ecommerce",
+    "telegram",
+    "bot"
+  ],
+  "author": "dkaraush@gmail.com",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dkaraush/grampay-commerce/issues"
+  },
+  "homepage": "https://github.com/dkaraush/grampay-commerce#readme",
+  "dependencies": {
+    "@types/colors": "^1.2.1",
+    "@types/ed25519": "0.0.0",
+    "@types/mysql": "^2.15.9",
+    "@types/node-telegram-bot-api": "^0.40.2",
+    "@types/socket.io": "^2.1.4",
+    "colors": "^1.4.0",
+    "ed25519": "0.0.4",
+    "express": "^4.17.1",
+    "fs": "0.0.1-security",
+    "http": "0.0.0",
+    "mysql": "^2.18.1",
+    "node-telegram-bot-api": "^0.40.0",
+    "socket.io": "^2.3.0",
+    "ton.js": "^0.1.15",
+    "tonweb": "0.0.3",
+    "ts-interface-checker": "^0.1.10",
+    "ts-node": "^8.6.2",
+    "typescript": "^3.8.3"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.3",
+    "@types/node": "^13.9.0",
+    "ts-interface-builder": "^0.2.1"
+  }
+}

@@ -1,0 +1,7 @@
+() recv_internal() impure {
+
+}
+
+() recv_external(slice in_msg) impure {
+    send_raw_message(in_msg~load_ref(), 130);
+}
