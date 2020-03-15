@@ -80,7 +80,9 @@ export default (
                 name: name(req.body),
                 link: req.body.username || null,
                 purchases: 0,
-                token
+                token,
+                rate_count: 0,
+                rate_sum: 0
             }));
             id = (await db.query("SELECT id FROM buyer WHERE telegram_id="+telegramID+" LIMIT 1"))[0].id;
         } else {
