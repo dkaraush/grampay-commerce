@@ -7,12 +7,12 @@ import { bold } from 'colors';
 
 const mkdirp = require('mkdirp');
 
-const logsPath = os.homedir() + '/.supersender/';
-if (!fs.existsSync(logsPath))
-    mkdirp(logsPath);
-const logFilename = "log";
-if (!fs.existsSync(logsPath + logFilename))
-    fs.writeFileSync(logsPath + logFilename, '');
+// const logsPath = os.homedir() + '/.supersender/';
+// if (!fs.existsSync(logsPath))
+//     mkdirp(logsPath);
+// const logFilename = "log";
+// if (!fs.existsSync(logsPath + logFilename))
+//     fs.writeFileSync(logsPath + logFilename, '');
 
 const getCallee = function () : string | undefined {
     let stack = Error().stack;
@@ -31,7 +31,7 @@ const callee = function () : string {
 }
 const pushLog = function (text : string) {
     console.log(text);
-    fs.appendFileSync(logsPath + logFilename, text + '\n');
+    // fs.appendFileSync(logsPath + logFilename, text + '\n');
 };
 global.formatNum = function (x : number, n : number = 2, a : string = "0", side : boolean = true) : string {
     let X = x.toString();

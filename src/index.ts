@@ -6,16 +6,14 @@ import socketio from 'socket.io';
 import bodyParser from 'body-parser';
 import makeChat from './chat';
 import TelegramBot from 'node-telegram-bot-api';
+import * as fs from 'fs';
 
-const token = '1140675303:AAE8HhLgnxBlYA34d-VTF2rJzsP03L2Zh_U';
+const config = JSON.parse(fs.readFileSync('config.json').toString());
+let db = makeDB(config.db);
+
+const token = config.telegramToken;
 const bot = new TelegramBot(token, {polling: true});
 
-let db = makeDB({
-    host: "localhost",
-    user: "root",
-    password: "root",
-    database: "grampay-commerce"
-});
 
 const app = express();
 app.use((req, res, next) => {
