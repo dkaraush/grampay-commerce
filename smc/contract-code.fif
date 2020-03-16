@@ -1,6 +1,0 @@
-<b
-  ACCEPT
-  DROP LDREF DROP
-  x{82} s, 0 5 u, 130 19 i,
-  SENDRAWMSG
-b>

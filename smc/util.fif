@@ -1,0 +1,6 @@
+{ <s dup sbits 8 / B@ BhashB } : stringhash
+
+{ <b 0 32 u, swap $, b> 
+  <s dup sbits 8 / B@ Bhash
+  4294967295 and } : calchash
+

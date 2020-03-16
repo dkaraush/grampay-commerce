@@ -1,0 +1,164 @@
+(tuple) tupleempty() asm "NIL";
+(tuple) tuplenew(int n) asm "TUPLEVAR";
+(tuple, ()) ~tpush_int(tuple t, int val) asm "TPUSH";
+(tuple, ()) ~tpush_ref(tuple t, cell val) asm "TPUSH";
+(tuple, ()) ~tpush_cell(tuple t, cell val) asm "TPUSH";
+(tuple, ()) ~tpush_slice(tuple t, slice val) asm "TPUSH";
+(tuple, ()) ~tpush_tuple(tuple t, tuple val) asm "TPUSH";
+(int) tlen(tuple t) asm "TLEN";
+(int) pow2(int x) asm "POW2";
+
+;; order: [status (1), time (32), addr (8+256), amount (64)]
+
+() recv_internal (int value, cell inmsgcell, slice in_msg) impure {
+	if (value < 500000000) {
+		return();
+	}
+	slice cs = inmsgcell.begin_parse();
+	int flags = cs~load_uint(4);
+	(int src_wc, int src_addr) = cs~load_msg_addr().parse_std_addr();
+
+	slice data = get_data().begin_parse();
+	slice start = data~load_bits(272);
+	var orders = data~load_dict();
+	orders~udict_set(32, 
+					 string_hash(in_msg) & 0xffffffff, 
+					 begin_parse(
+					 	begin_cell()
+					 		.store_uint(1, 1)
+					 		.store_uint(now() + 604800, 32)
+					 		.store_int(src_wc, 8)
+					 		.store_uint(src_addr, 256)
+					 		.store_uint(value / 100 * 98, 64)
+					 	.end_cell()
+					 ));
+	set_data(
+		begin_cell()
+			.store_slice(start)
+			.store_dict(orders)
+		.end_cell()
+	);
+}
+
+() recv_external (slice in_msg) impure {
+	slice data = get_data().begin_parse();
+	int seqno = data~load_uint(16);
+	throw_unless(50, seqno == in_msg~load_uint(16)); ;; bad seqno
+
+	int opt = in_msg~load_uint(5);
+	int pub = data~load_uint(256);
+	if (opt < 4) {
+		;; not refund_external: should check signature
+		var signature = in_msg~load_bits(512);
+		var hash = string_hash(in_msg);
+		throw_unless(51, check_signature(hash, signature, pub));
+		accept_message();
+	}
+
+	var orders = data~load_dict();
+	int orderKey = in_msg~load_uint(64);
+	if ((opt == 4) | (opt == 1)) {
+		(slice order, int f) = orders~udict_delete_get?(32, orderKey);
+		throw_unless(52, f);
+
+		int status = order~load_uint(1);
+		if (opt == 4) {
+			throw_unless(53, status);
+			throw_unless(54, order~load_uint(32) < now());
+			accept_message();
+		} else {
+			order.skip_bits(32);
+		}
+
+		send_raw_message(
+			begin_cell()
+				.store_uint(132, 9)
+				.store_slice(order~load_bits(264))
+				.store_grams(order~load_uint(64))
+				.store_uint(0, 106)
+			.end_cell(), 3
+		);
+	}
+	if (opt == 2) {
+		(slice order, int f) = orders~udict_delete_get?(32, orderKey);
+		throw_unless(55, f);
+		order.skip_bits(297); ;; skip status, time and addr
+
+		var amount = order~load_uint(64);
+		send_raw_message(
+			begin_cell()
+				.store_uint(132, 9)
+				.store_slice(in_msg~load_bits(264))
+				.store_grams(amount)
+				.store_uint(0, 106)
+			.end_cell(), 3);
+	}
+
+	if (opt == 3) {
+		(slice order, int f) = orders.udict_get?(32, orderKey);
+		throw_unless(56, f);
+		order.skip_bits(1);
+		orders~udict_set(32, orderKey, begin_parse(
+										begin_cell()
+											.store_uint(0, 1)
+											.store_slice(order~load_bits(360))
+										.end_cell()));
+	}
+
+	set_data(
+		begin_cell()
+			.store_uint(seqno + 1, 16)
+			.store_uint(pub, 256)
+			.store_dict(orders)
+		.end_cell()
+	);
+}
+
+cell orders() {
+	var data = get_data().begin_parse();
+	data~skip_bits(272);
+	return data~load_dict();
+}
+
+;; -1 = not found
+;; 0  = frozen (cant refund)
+;; 1  = can refund!
+;; 2  = cant refund yet
+int status(int orderKey) method_id {
+	(slice order, int f) = orders().udict_get?(32, orderKey);
+	ifnot (f) {
+		return(-1);
+	}
+	int status = order~load_uint(1);
+	if (status == 0) {
+		return(0);
+	}
+
+	int time = order~load_uint(32);
+	if (time < now()) {
+		return(1);
+	} else {
+		return(2);
+	}
+}
+
+tuple data() method_id {
+	var orders = orders();
+	int index = -1;
+	int f = 0;
+	var t = tupleempty();
+	do {
+		(index, slice order, f) = orders.udict_get_next?(32, index);
+		if (f) {
+			var T = tupleempty();
+			T~tpush_int(index);
+			T~tpush_int(order~load_uint(1));
+			T~tpush_int(order~load_uint(32));
+			T~tpush_int(order~load_int(8));
+			T~tpush_slice(order~load_bits(256));
+			T~tpush_int(order~load_uint(64));
+			t~tpush_tuple(T);
+		}
+	} until ( ~ f);
+	return t;
+}

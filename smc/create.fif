@@ -1,0 +1,72 @@
+"Asm.fif" include
+"TonUtil.fif" include
+"Color.fif" include
+"util.fif" include
+
+0 =: wc
+"contract" =: file-base
+
+
+file-base +".pk" load-keypair =: priv =: pub
+
+"code.fif" include =: code
+null =: libraries
+<b
+	// hash 64 u,
+	// 0 8 i, x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
+b> =: msg
+<b
+	0 16 u,
+	0 5 u,
+	msg stringhash priv ed25519_sign B,
+	msg <s s,
+b> =: message
+
+<b
+ 	0 16 u,
+ 	pub B,
+ 	dictnew dict,
+b> =: storage
+// "storage.dat" file>B B>boc =: storage
+
+/*
+0 tuple 0x076ef1ea ,
+0 , 0 ,
+now ,
+1 , 1 , 0 ,
+ 0 tuple 9223372036854775807 , dictnew , ,
+0 , dictnew ,
+1 tuple
+constant c7 */
+// keys = 117603
+// status = 101642
+
+/*
+<b b{1000100} s, 
+	0 8 i,
+	x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
+ 	10 Gram, b{00} s, b> constant meta */
+
+// message <s recv_external code <s storage c7 runvmctx
+// 10000000000 meta <b "Hello world" $, b> <s recv_internal code <s storage c7 runvmctx
+// 100194 code <s storage c7 runvmctx
+// drop drop .s
+// dup <s csr. .s
+// boc>B "storage.dat" B>file
+
+<b b{0011} s, code ref, storage ref, libraries dict, b> =: StateInit
+StateInit hashu wc swap 2constant wallet_addr
+
+^White ."The website address: " ^reset wallet_addr .addr cr
+^White ."Non-bounceable (for init): " ^reset wallet_addr 7 .Addr cr
+^White ."Bounceable (for later access): " ^reset wallet_addr 6 .Addr cr
+wallet_addr file-base +".addr" dup
+^cyan ."Address is saved to " ^reset ^Cyan type ^reset cr
+save-address
+
+<b b{1000100} s, wallet_addr addr, b{000010} s, StateInit <s s, b{0} s, message <s s, b> constant external_message
+external_message <s csr.
+cr
+file-base +"-query.boc" dup
+^green ."Creation query saved to " ^reset ^Green type ^reset cr
+external_message boc>B swap B>file

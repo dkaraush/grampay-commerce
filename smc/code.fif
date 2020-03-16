@@ -1,0 +1,286 @@
+// automatically generated from `/Users/dkaraush/ton/crypto/smartcont/stdlib.fc` `code.fc` 
+PROGRAM{
+  DECLPROC recv_internal
+  DECLPROC recv_external
+  DECLPROC orders
+  101642 DECLMETHOD status
+  100194 DECLMETHOD data
+  recv_internal PROC:<{
+    s2 PUSH
+    500000000 PUSHINT
+    LESS
+    IFJMP:<{
+      3 BLKDROP
+    }>
+    SWAP
+    CTOS
+    4 LDU
+    NIP
+    LDMSGADDR
+    DROP
+    REWRITESTDADDR
+    c4 PUSH
+    CTOS
+    272 PUSHINT
+    LDSLICEX
+    LDDICT
+    DROP
+    s0 s5 XCHG
+    100 PUSHINT
+    DIV
+    98 MULCONST
+    NOW
+    604800 PUSHINT
+    ADD
+    1 PUSHINT
+    NEWC
+    1 STU
+    32 STU
+    s1 s4 XCHG
+    8 STI
+    s1 s2 XCHG
+    256 STU
+    s1 s2 XCHG
+    64 STU
+    ENDC
+    CTOS
+    s0 s2 XCHG
+    SHA256U
+    32 PUSHPOW2DEC
+    AND
+    s0 s3 XCHG2
+    32 PUSHINT
+    DICTUSET
+    NEWC
+    ROT
+    STSLICER
+    STDICT
+    ENDC
+    c4 POP
+  }>
+  recv_external PROC:<{
+    c4 PUSH
+    CTOS
+    16 LDU
+    s0 s2 XCHG
+    16 LDU
+    s2 s1 PUXC
+    EQUAL
+    50 THROWIFNOT
+    5 LDU
+    s0 s3 XCHG
+    256 LDU
+    s2 PUSH
+    4 LESSINT
+    IF:<{
+      s0 s4 XCHG
+      9 PUSHPOW2
+      LDSLICEX
+      DUP
+      SHA256U
+      s0 s2 s3 XC2PU
+      CHKSIGNU
+      51 THROWIFNOT
+      ACCEPT
+      s0 s4 XCHG
+    }>
+    s2 PUSH
+    0 EQINT
+    IFJMP:<{
+      5 BLKDROP
+    }>
+    LDDICT
+    DROP
+    s0 s4 XCHG
+    64 LDU
+    s3 PUSH
+    4 EQINT
+    s4 PUSH
+    1 EQINT
+    OR
+    IF:<{
+      s1 s5 PUXC
+      32 PUSHINT
+      DICTUDELGET
+      NULLSWAPIFNOT
+      52 THROWIFNOT
+      1 LDU
+      s5 PUSH
+      4 EQINT
+      IF:<{
+        SWAP
+        53 THROWIFNOT
+        32 LDU
+        NOW
+        s1 s2 XCHG
+        LESS
+        54 THROWIFNOT
+        ACCEPT
+      }>ELSE<{
+        NIP
+      }>
+      0 PUSHINT
+      132 PUSHINT
+      NEWC
+      9 STU
+      s0 s2 XCHG
+      264 PUSHINT
+      LDSLICEX
+      s3 s3 XCHG2
+      STSLICER
+      s0 s2 XCHG
+      64 LDU
+      DROP
+      s1 s2 XCHG
+      STGRAMS
+      106 STU
+      ENDC
+      3 PUSHINT
+      SENDRAWMSG
+      s0 s5 XCHG
+    }>
+    s3 PUSH
+    2 EQINT
+    IF:<{
+      s1 s5 PUXC
+      32 PUSHINT
+      DICTUDELGET
+      NULLSWAPIFNOT
+      55 THROWIFNOT
+      64 LDU
+      DROP
+      0 PUSHINT
+      132 PUSHINT
+      NEWC
+      9 STU
+      s0 s8 XCHG
+      264 PUSHINT
+      LDSLICEX
+      DROP
+      s1 s8 XCHG
+      STSLICER
+      SWAP
+      STGRAMS
+      s1 s6 XCHG
+      106 STU
+      ENDC
+      3 PUSHINT
+      SENDRAWMSG
+    }>ELSE<{
+      DROP
+    }>
+    s0 s2 XCHG
+    3 EQINT
+    IF:<{
+      s1 s3 PUSH2
+      32 PUSHINT
+      DICTUGET
+      NULLSWAPIFNOT
+      56 THROWIFNOT
+      0 PUSHINT
+      NEWC
+      1 STU
+      SWAP
+      360 PUSHINT
+      LDSLICEX
+      DROP
+      STSLICER
+      ENDC
+      CTOS
+      s0 s0 s4 XCHG3
+      32 PUSHINT
+      DICTUSET
+      s0 s2 XCHG
+    }>ELSE<{
+      NIP
+    }>
+    SWAP
+    INC
+    NEWC
+    16 STU
+    256 STU
+    STDICT
+    ENDC
+    c4 POP
+  }>
+  orders PROC:<{
+    c4 PUSH
+    CTOS
+    272 PUSHINT
+    SDSKIPFIRST
+    LDDICT
+    DROP
+  }>
+  status PROC:<{
+    orders CALLDICT
+    32 PUSHINT
+    DICTUGET
+    NULLSWAPIFNOT
+    IFNOTJMP:<{
+      DROP
+      -1 PUSHINT
+    }>
+    1 LDU
+    SWAP
+    0 EQINT
+    IFJMP:<{
+      DROP
+      0 PUSHINT
+    }>
+    32 LDU
+    DROP
+    NOW
+    LESS
+    IFJMP:<{
+      1 PUSHINT
+    }>
+    2 PUSHINT
+  }>
+  data PROC:<{
+    orders CALLDICT
+    -1 PUSHINT
+    NIL
+    UNTIL:<{
+      s1 s2 XCPU
+      32 PUSHINT
+      DICTUGETNEXT
+      NULLSWAPIFNOT2
+      DUP
+      IF:<{
+        NIL
+        s2 PUSH
+        TPUSH
+        s0 s3 XCHG
+        1 LDU
+        s4 s4 XCHG2
+        TPUSH
+        s0 s3 XCHG
+        32 LDU
+        s4 s4 XCHG2
+        TPUSH
+        s0 s3 XCHG
+        8 LDI
+        s4 s4 XCHG2
+        TPUSH
+        s0 s3 XCHG
+        256 LDSLICE
+        s4 s4 XCHG2
+        TPUSH
+        s0 s3 XCHG
+        64 LDU
+        DROP
+        s1 s3 XCHG
+        TPUSH
+        s1 s3 XCHG
+        TPUSH
+        s0 s2 XCHG
+      }>ELSE<{
+        s2 POP
+      }>
+      SWAP
+      NOT
+      s1 s2 XCHG
+    }>
+    2 1 BLKDROP2
+  }>
+}END>c
