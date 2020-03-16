@@ -7,7 +7,7 @@ const _ = (from : string) => ((options? : any, format : boolean = true) => {
     return text;
 });
 
-const domain = '127.0.0.1';
+const domain = 'https://grampay.org';
 
 export default {
     escapeHTML, domain,

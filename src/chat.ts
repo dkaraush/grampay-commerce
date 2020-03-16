@@ -82,7 +82,7 @@ export default (db : Database, io : Server) : Chat => {
             }
         }
 
-        verbose(message);
+        //verbose(message);
         if (!sent.includes(2) && whenOfflineCallback !== null) {
             whenOfflineCallback(order, true, message);
         }
