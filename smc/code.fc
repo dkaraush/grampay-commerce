@@ -21,17 +21,25 @@
 	slice data = get_data().begin_parse();
 	slice start = data~load_bits(272);
 	var orders = data~load_dict();
+	int hash = string_hash(in_msg) & 0xffffffff;
+	(slice order, int f) = orders.udict_get?(32, hash);
+	int s = 0;
+	if (f) {
+		throw_unless(90, order~load_uint(1));
+		order~skip_bits(296);
+		s = order~load_uint(64);
+	}
 	orders~udict_set(32, 
-					 string_hash(in_msg) & 0xffffffff, 
-					 begin_parse(
-					 	begin_cell()
-					 		.store_uint(1, 1)
-					 		.store_uint(now() + 604800, 32)
-					 		.store_int(src_wc, 8)
-					 		.store_uint(src_addr, 256)
-					 		.store_uint(value / 100 * 98, 64)
-					 	.end_cell()
-					 ));
+						hash, 
+						begin_parse(
+						begin_cell()
+							.store_uint(1, 1)
+							.store_uint(now() + 14400, 32) ;; 4 hours
+							.store_int(src_wc, 8)
+							.store_uint(src_addr, 256)
+							.store_uint(s + value, 64)
+						.end_cell()
+						));
 	set_data(
 		begin_cell()
 			.store_slice(start)
@@ -40,69 +48,82 @@
 	);
 }
 
-() recv_external (slice in_msg) impure {
+() recv_external (slice in_msg_) impure {
+	slice in_msg = begin_parse(in_msg_~load_ref());
+
 	slice data = get_data().begin_parse();
 	int seqno = data~load_uint(16);
 	throw_unless(50, seqno == in_msg~load_uint(16)); ;; bad seqno
 
-	int opt = in_msg~load_uint(5);
+	int opt = in_msg~load_uint(8);
 	int pub = data~load_uint(256);
-	if (opt < 4) {
+	ifnot (opt == 4) {
 		;; not refund_external: should check signature
 		var signature = in_msg~load_bits(512);
-		var hash = string_hash(in_msg);
+		var hash = slice_hash(in_msg);
 		throw_unless(51, check_signature(hash, signature, pub));
 		accept_message();
 	}
 
 	var orders = data~load_dict();
-	int orderKey = in_msg~load_uint(64);
-	if ((opt == 4) | (opt == 1)) {
-		(slice order, int f) = orders~udict_delete_get?(32, orderKey);
-		throw_unless(52, f);
+	ifnot ((opt == 0) | (opt == 10)) {
+		int orderKey = in_msg~load_uint(32);
+		if ((opt == 4) | (opt == 1)) {
+			(slice order, int f) = orders~udict_delete_get?(32, orderKey);
 
-		int status = order~load_uint(1);
-		if (opt == 4) {
-			throw_unless(53, status);
-			throw_unless(54, order~load_uint(32) < now());
-			accept_message();
-		} else {
-			order.skip_bits(32);
+			if (opt == 4) {
+				int status = order~load_uint(1);
+				throw_unless(52, f);
+				throw_unless(53, status);
+				throw_unless(54, order~load_uint(32) < now());
+				accept_message();
+			} else {
+				order~skip_bits(33);
+			}
+
+			if (f) {
+				send_raw_message(
+					begin_cell()
+						.store_uint(196, 9)
+						.store_slice(order~load_bits(264))
+						.store_grams(order~load_uint(64))
+						.store_uint(0, 108)
+					.end_cell(), 3
+				);
+			}
+		}
+		if (opt == 2) {
+			(slice order, int f) = orders~udict_delete_get?(32, orderKey);
+			throw_unless(55, f);
+			order~skip_bits(297); ;; skip status, time and addr
+
+			var amount = order~load_uint(64);
+			send_raw_message(
+				begin_cell()
+					.store_uint(196, 9)
+					.store_slice(in_msg~load_bits(264))
+					.store_grams(amount / 100 * 98)
+					.store_uint(0, 108)
+				.end_cell(), 3);
 		}
 
-		send_raw_message(
-			begin_cell()
-				.store_uint(132, 9)
-				.store_slice(order~load_bits(264))
-				.store_grams(order~load_uint(64))
-				.store_uint(0, 106)
-			.end_cell(), 3
-		);
-	}
-	if (opt == 2) {
-		(slice order, int f) = orders~udict_delete_get?(32, orderKey);
-		throw_unless(55, f);
-		order.skip_bits(297); ;; skip status, time and addr
-
-		var amount = order~load_uint(64);
-		send_raw_message(
-			begin_cell()
-				.store_uint(132, 9)
-				.store_slice(in_msg~load_bits(264))
-				.store_grams(amount)
-				.store_uint(0, 106)
-			.end_cell(), 3);
+		if (opt == 3) {
+			(slice order, int f) = orders.udict_get?(32, orderKey);
+			throw_unless(56, f);
+			order~skip_bits(1);
+			orders~udict_set(32, orderKey, begin_parse(
+											begin_cell()
+												.store_uint(0, 1)
+												.store_slice(order~load_bits(360))
+											.end_cell()));
+		}
 	}
 
-	if (opt == 3) {
-		(slice order, int f) = orders.udict_get?(32, orderKey);
-		throw_unless(56, f);
-		order.skip_bits(1);
-		orders~udict_set(32, orderKey, begin_parse(
-										begin_cell()
-											.store_uint(0, 1)
-											.store_slice(order~load_bits(360))
-										.end_cell()));
+	if (opt == 10) {
+		while (in_msg.slice_refs()) {
+			int mode = in_msg~load_uint(8);
+			send_raw_message(in_msg~load_ref(), mode);
+		}
 	}
 
 	set_data(
@@ -161,4 +182,9 @@ tuple data() method_id {
 		}
 	} until ( ~ f);
 	return t;
+}
+
+int seqno() method_id {
+	var data = get_data().begin_parse();
+	return data~load_uint(16);
 }

@@ -34,6 +34,7 @@
     "@types/mysql": "^2.15.9",
     "@types/node-telegram-bot-api": "^0.40.2",
     "@types/socket.io": "^2.1.4",
+    "bigint-buffer": "^1.1.5",
     "colors": "^1.4.0",
     "ed25519": "0.0.4",
     "express": "^4.17.1",
@@ -43,10 +44,12 @@
     "mysql": "^2.18.1",
     "node-telegram-bot-api": "^0.40.0",
     "socket.io": "^2.3.0",
-    "ton.js": "^0.1.15",
+    "ton.js": "^0.1.25",
     "tonweb": "0.0.3",
+    "tonweb-boc": "0.0.3",
     "ts-interface-checker": "^0.1.10",
     "ts-node": "^8.6.2",
+    "tweetnacl-ts": "^1.0.3",
     "typescript": "^3.8.3"
   },
   "devDependencies": {

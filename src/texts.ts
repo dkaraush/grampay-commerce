@@ -7,6 +7,7 @@ const _ = (from : string) => ((options? : any, format : boolean = true) => {
     return text;
 });
 
+const short_domain = 'grampay.org';
 const domain = 'https://grampay.org';
 
 export default {
@@ -21,22 +22,24 @@ Link to the chat: <b><a href=\"${domain}/order/?{token}\">Order #{order_id}</a><
 
 Link to the chat: <b><a href=\"${domain}/order/?{token}\">Order #{order_id}</a></b>`),
     
-    welcome: _(`Welcome to Grampay - First GRAM Payment Gateway! Here you can create and manage your advertisements.`),
+    welcome: _(`Welcome to Grampay - Accept payments in TON Gram. This bot allows you to create your very own shop and add your products.`),
     createShopButton: _('Create shop!'),
     alreadyHaveShop: _('Oops, you already have a shop. Type /shop to manage your advertisements.'),
     doesntHaveShop: _('Missing shop.'),
-
+    
     askShopType: _('Please select the type of a product that you want to sell?'),
-    shopTypeDigitalButton: _('Digital Goods'),
-    shopTypePhysicalButton: _('Physic Items'),
+    badShopType: _('Please, click at one of buttons in the keyboard menu.'),
+    shopTypeDigitalButton: _('☁️ Digital Goods'),
+    shopTypePhysicalButton: _('🍏 Physical Items'),
 
     askDescription: _(`Great! Write a description of your shop. From 2 to 256 symbols.`),
     badDescription: _('Oh, bad description. Have you read about from 2 to 256 symbols limit?'),
 
     askAddress: _(`Nice! The last step: give us an address to your Gram wallet.
 <a href='https://wallet.ton.org/'>Link to the official Gram Wallet.</a>`),
-    badAddress: _(`Ashh, bad TON Address. :/`),
-    shopDone: _('Your shop has been created! You are welcome to put some products in it.'),
+    badAddress: _(`This doesn’t look like a valid wallet address.`),
+    shopDone: _(`Your shop has been created at <b><a href="${domain}/shop/{link}">${short_domain}/shop/{link}</a></b>!
+You are welcome to put some products in it by pressing <b>"🛒 Make an advertisement"</b>`),
 
     help: _(`/info shows shop and products info
 /orders shows all your orders.
@@ -72,14 +75,36 @@ File limit: 10MB.`),
 
     productAdded: _(`Product <b>{title}</b> (\${price_usd} ≈ {price_grm} GRM) was added to your shop!`),
 
-    chatNotification: _(`<b>{from_name}</b> ({from_type}) sent you: "{text}"
+    chatNotification: _(`💬 <b>{from_name}</b> sent you: "{text}"
 
 (<a href="${domain}/order/?{token}">Order #{order_id}</a>: {product_name})`),
-    chatNotificationFile: _(`<b>{from_name}</b> ({from_type}) sent you a file: <b>{filename}</b> ({filesize})
+    chatNotificationFile: _(`💬 <b>{from_name}</b> sent you a file: <b>{filename}</b> ({filesize})
 (<a href="${domain}/order/?{token}">Order #{order_id}</a>: {product_name})`),
     cancelNotification: _(`<b>{from_name}</b> ({from_type}) cancelled <b><a href="${domain}/order/?{order_token}">Order #{order_id}</a></b>.`),
     confirmNotification: _(`<b>{from_name}</b> confirmed <b><a href="${domain}/order/?{order_token}">Order #{order_id}</a></b>.
 You are welcome to pay the order.`),
+
+    releaseNotification: _(`<b>{from_name}</b> released {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
+    refundNotification:  _(`<b>{from_name}</b> refunded back {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
+
+    youDisputed: _(`You opened dispute in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.
+Funds of the order are frozen and waiting for support decision.`),
+    theyDisputed: _(`Dispute was opened in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.
+Funds of the order are frozen and waiting for support decision.`),
+
+    payNotificationBuyer: _(`💸 Payment for <a href="${domain}/product/{product_id}"><b>"{product_name}"</b></a> has been completed successfully.
+
+{product_name} — <b>\${product_price_usd}</b> ({product_price_grm} GRM)
+GramPay Fee ({fee_percent}%) — <b>\${fee_usd}</b> ({fee_grm} GRM)
+<b>Total — \${total_usd} ({total_grm} GRM)</b>
+
+Link to the chat: <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>
+
+If there is no dispute and Gram has not been sent to the buyer, you will receive Gram back to your wallet automatically in 7 days.`),
+    payNotificationSeller: _(`💸 <b>{from_name}</b> paid <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>!
+Please note that you have <b>7 days</b> to fullfill the order. In case there is no confirmation from a buyer after the product has been sent, freeze the funds by opening a dispute.
+
+Link to the chat: <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>`),
 
     details: <any> {
         fname: "First name",

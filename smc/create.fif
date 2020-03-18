@@ -7,7 +7,7 @@
 "contract" =: file-base
 
 
-file-base +".pk" load-keypair =: priv =: pub
+file-base +".pk" load-generate-keypair =: priv =: pub
 
 "code.fif" include =: code
 null =: libraries
@@ -16,10 +16,12 @@ null =: libraries
 	// 0 8 i, x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
 b> =: msg
 <b
-	0 16 u,
-	0 5 u,
-	msg stringhash priv ed25519_sign B,
-	msg <s s,
+	<b 
+		0 16 u,
+		0 8 u,
+		msg <s shash priv ed25519_sign B,
+		msg <s s,
+	b> ref,
 b> =: message
 
 <b
@@ -29,7 +31,7 @@ b> =: message
 b> =: storage
 // "storage.dat" file>B B>boc =: storage
 
-/*
+
 0 tuple 0x076ef1ea ,
 0 , 0 ,
 now ,
@@ -37,7 +39,7 @@ now ,
  0 tuple 9223372036854775807 , dictnew , ,
 0 , dictnew ,
 1 tuple
-constant c7 */
+constant c7 
 // keys = 117603
 // status = 101642
 
@@ -47,7 +49,7 @@ constant c7 */
 	x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
  	10 Gram, b{00} s, b> constant meta */
 
-// message <s recv_external code <s storage c7 runvmctx
+message <s recv_external code <s storage c7 runvmctx .s
 // 10000000000 meta <b "Hello world" $, b> <s recv_internal code <s storage c7 runvmctx
 // 100194 code <s storage c7 runvmctx
 // drop drop .s
@@ -70,3 +72,7 @@ cr
 file-base +"-query.boc" dup
 ^green ."Creation query saved to " ^reset ^Green type ^reset cr
 external_message boc>B swap B>file
+
+
+
+<b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s, dup bbits swap b> <s csr. . cr

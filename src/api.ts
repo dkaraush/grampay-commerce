@@ -4,12 +4,13 @@ import express, {Express, Response} from 'express';
 import * as fs from 'fs';
 import crypto from 'crypto';
 import https from 'https';
-import { Database } from './db';
+import db, { Database } from './db';
 import { Chat, Message } from './chat';
 import {homedir} from 'os';
 import {join as joinPathes} from 'path';
 import TEXTS from './texts';
-import './blockchain';
+import { Blockchain } from './blockchain';
+import { bold } from 'colors';
 const {TONAddress} = require('ton.js');
 
 const sha256 = (str : string) : Buffer => {
@@ -38,13 +39,32 @@ const randomString = (n : number = 16, q : string = "1234567890QWERTYUIOPASDFGHJ
 const fee = 0.02;
 const usd2grm = (usd : number) => usd / 4;
 
+
 export default (
     token: string, 
     bot : TelegramBot, 
     app : Express, 
     chat : Chat,
-    db : Database) => {
+    db : Database,
+    bch : Blockchain) => {
     const secret = sha256(token);
+
+    
+    const keyboardCancel =        {text: "🛑 Cancel"};
+    const keyboardCreateShop =    {text: "🚀 Create shop!"};
+
+    const keyboardInfoShop =      {text: "ℹ️ Shop info"};
+    const keyboardPendingOrders = {text: "📈 Pending orders"};
+    const keyboardAllOrders =     {text: "📊 All orders"};
+    const keyboardNewProduct =    {text: "🛒 Make an advertisement"};
+    const keyboardRemoveShop =    {text: "❌ Delete shop (Dangerous)"};
+    const sellerKeyboard = [
+        [ keyboardInfoShop ],
+        [ keyboardPendingOrders, keyboardAllOrders ],
+        [ keyboardNewProduct ],
+        [ keyboardRemoveShop ]
+    ];
+    const cancelOptions ={};//  {reply_markup: {keyboard: [[keyboardCancel]]}};
 
     app.post('/login-buyer', async (req : any, res : Response<any>) => {
         let productID : number = NaN;
@@ -152,7 +172,8 @@ export default (
 
         if (product.deleted)
             return res.status(403).end();
-            
+        
+        let btoken = bch.makeOrder();
         await db.query(
             db.insertQuery('order', {
                 seller_id:    seller.id,
@@ -164,9 +185,11 @@ export default (
                 amount_grm:   grmWithFee,
                 price_usd:    usd,
                 price_grm:    grm,
-                address:      "EQCMVuNax7q7hhDmaoRqaQpPjELKXasf8CG6NUbhxAFgDr8Y",
+                address:      bch.address,
                 privkey:      "private-key",
-                opened_time:  unix()
+                opened_time:  unix(),
+                token:        btoken.token,
+                key:          btoken.key
             })
         );
         order = await db.findOrderByIdAndToken(product.id, sellerOrderToken, 'seller_token');
@@ -210,6 +233,7 @@ export default (
             );
         }
 
+        bch.updateOrdersList();
         res.json({orderToken: buyerOrderToken});
     });
 
@@ -309,7 +333,7 @@ export default (
 
         let filterKeys = ['id', 'paid', 'released', 'refunded', 'dispute', 'opened_time', 'paid_time', 'price_usd', 'price_grm', 'amount_usd', 'amount_grm', 'confirmed', 'complete', 'success'];
         if (isBuyer)
-            filterKeys.push('address');
+            filterKeys.push('address', 'token', 'key');
 
         res.json(Object.assign(
             filter(order, filterKeys),
@@ -377,8 +401,8 @@ export default (
 
         let textFunc = message.file ? TEXTS.chatNotificationFile : TEXTS.chatNotification;
         bot.sendMessage(telegram_id, textFunc({
-            from_name: toBuyer ? seller.title : buyer.name,
-            from_type: (['system', 'support', 'buyer', 'seller'])[message.from],
+            from_name: (['', 'GramPay', buyer.name, seller.title])[message.from],
+            from_type: (['system', 'Support', 'buyer', 'seller'])[message.from],
             text: message.text,
             filesize: message.file ? fileSize(message.file) : '',
             filename: message.filename,
@@ -389,6 +413,9 @@ export default (
     });
     chat.onProcessOrder(async (order_id: number, fromBuyer: boolean, action : string) => {
         let order = await db.findOrderById(order_id);
+        
+        if (order.complete)
+            return;
         
         let seller = await db.findSellerById(order.seller_id),
             buyer = await db.findBuyerById(order.buyer_id);
@@ -412,12 +439,10 @@ export default (
                     order_id: order.id 
                 }), {parse_mode: "HTML"});
             }
-        }
-
-        if (action === 'confirm' && !fromBuyer) {
+        } else if (action === 'confirm' && !fromBuyer) {
             if (order.confirmed)
                 return;
-            await db.query(`UPDATE \`order\` SET confirmed=1 WHERE id=${order.id};`)
+            await db.query(`UPDATE \`order\` SET confirmed=1 WHERE id=${order.id};`);
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, true)) {
                 bot.sendMessage(buyer.telegram_id, TEXTS.confirmNotification({
@@ -426,9 +451,100 @@ export default (
                     order_id: order.id
                 }), {parse_mode: "HTML"});
             }
+        } else if (action === 'release' && fromBuyer) {
+            bch.release(order.key, seller.address);
+            await db.query(`UPDATE \`order\` SET released=1, complete=1, dispute=0, success=1 WHERE id=${order.id};`)
+            chat.updateOrderData(order.id);
+            if (!chat.isOnline(order.id, false)) {
+                bot.sendMessage(seller.telegram_id, TEXTS.releaseNotification({
+                    from_name: buyer.name,
+                    order_id: order.id,
+                    order_token: order.seller_token,
+                    amount_grm: order.price_grm.toFixed(2)
+                }), {parse_mode: "HTML"});
+            }
+            chat.send(order.id, 0, JSON.stringify({
+                id: "release"
+            }));
+        } else if (action === 'refund' && !fromBuyer) {
+            bch.refund(order.key);
+            await db.query(`UPDATE \`order\` SET refunded=1, complete=1, dispute=0 WHERE id=${order.id};`)
+            chat.updateOrderData(order.id);
+            if (!chat.isOnline(order.id, true)) {
+                bot.sendMessage(buyer.telegram_id, TEXTS.refundNotification({
+                    from_name: seller.name,
+                    order_id: order.id,
+                    order_token: order.buyer_token,
+                    amount_grm: order.price_grm.toFixed(2)
+                }), {parse_mode: "HTML"});
+            }
+            chat.send(order.id, 0, JSON.stringify({
+                id: "refund"
+            }));
+        }
+
+        if (action === 'dispute' && !order.dispute) {
+            bch.freeze(order.key);
+            await db.query(`UPDATE \`order\` SET dispute=1 WHERE id=${order.id}`);
+            chat.updateOrderData(order.id);
+            bot.sendMessage(buyer.telegram_id, 
+                (fromBuyer ? TEXTS.youDisputed : TEXTS.theyDisputed)({
+                    order_id: order.id,
+                    order_token: order.buyer_token
+                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, true)});
+            bot.sendMessage(seller.telegram_id, 
+                (!fromBuyer ? TEXTS.youDisputed : TEXTS.theyDisputed)({
+                    order_id: order.id,
+                    order_token: order.seller_token
+                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, false)});
         }
     });
 
+
+    bch.whenPaymentDone(async (order_id:number, escrow_time:number) => {
+        let order = await db.findOrderById(order_id);
+        let paid_time = escrow_time - 60*60*4; // i know, it's hack but time is ticking down and i dont want to waste time by changing table sOrrrY
+        await db.query(`UPDATE \`order\`
+                        SET paid_time=${paid_time}, paid=1
+                        WHERE id=${order.id} `);
+        bch.updateOrdersList();
+        chat.updateOrderData(order_id);
+        chat.send(order.id, 0, JSON.stringify({
+            id: 'payment'
+        }));
+
+        let seller = await db.findSellerById(order.seller_id);
+        let buyer = await db.findBuyerById(order.buyer_id);
+        let product = await db.findProductById(order.product_id);
+
+        bot.sendMessage(seller.id, TEXTS.payNotificationSeller({
+            from_name: buyer.name,
+            order_token: order.seller_token,
+            order_id: order.id
+        }), {parse_mode: "HTML"});
+        bot.sendMessage(buyer.id, TEXTS.payNotificationBuyer({
+            product_id: product.id,
+            product_name: product.title,
+            product_price_usd: order.price_usd.toFixed(2),
+            product_price_grm: order.price_grm.toFixed(2),
+            fee_percent: (fee * 100).toFixed(1),
+            fee_usd: (order.price_usd * fee).toFixed(2),
+            fee_grm: (order.price_grm * fee).toFixed(2),
+            total_usd: order.amount_usd.toFixed(2),
+            total_grm: order.amount_grm.toFixed(2)
+        }), {parse_mode: "HTML"});
+    });
+    bch.whenRefund(async (order_id: number) => {
+        let order = await db.findOrderById(order_id);
+        await db.query(`UPDATE \`order\`
+                        SET complete=1, refunded=1
+                        WHERE id=${order.id}`);
+        bch.updateOrdersList();
+        chat.updateOrderData(order_id);
+        chat.send(order.id, 0, JSON.stringify({
+            id: "auto-refund"
+        }));
+    });
 
     // bot
     let state = new State();
@@ -440,20 +556,7 @@ export default (
     bot.onText(/\/info|\/shop/, async (message) => {
         if (!message.from)
             return;
-        let seller = await db.findSellerById(message.from.id, 'telegram_id');
-        if (seller === null)
-            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop());
-        
-        let products = await db.query(`SELECT * FROM product WHERE seller=${seller.id} AND deleted=0`);
-        bot.sendMessage(message.from.id, TEXTS.info({
-            shop_link: seller.link || seller.id,
-            products_count: products.length,
-        }) + products.map((product : any, i : number) => TEXTS.productInfo({
-            i: i+1,
-            title: product.title,
-            price: product.price.toFixed(2),
-            id: product.id
-        })).join('\n'), {parse_mode: "HTML"});
+        await onShopInfo(message.from);
     });
     bot.onText(/\/remove_\d+/, async (message) => {
         if (!message.from)
@@ -463,7 +566,7 @@ export default (
 
         let seller = await db.findSellerById(message.from.id, 'telegram_id');
         if (seller === null)
-            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop());
+            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}});
 
         let match = message.text.match(/\/remove_(\d+)/);
         if (match === null || match.length < 2)
@@ -472,62 +575,307 @@ export default (
 
         let product = await db.findProductById(id);
         if (product === null)
-            return bot.sendMessage(message.from.id, TEXTS.productWasNotFound({id: id}));
+            return bot.sendMessage(message.from.id, TEXTS.productWasNotFound({id: id}), {reply_markup: {keyboard: sellerKeyboard}});
         if (product.seller !== seller.id)
-            return bot.sendMessage(message.from.id, TEXTS.productIsNotYours({id: id}));
+            return bot.sendMessage(message.from.id, TEXTS.productIsNotYours({id: id}), {reply_markup: {keyboard: sellerKeyboard}});
 
         await db.query(`UPDATE product SET deleted=1 WHERE id=${id}`);
-        bot.sendMessage(message.from.id, TEXTS.productWasRemoved());
+        bot.sendMessage(message.from.id, TEXTS.productWasRemoved(), {reply_markup: {keyboard: sellerKeyboard}});
     });
     bot.onText(/\/add_product/, async (message) => {
         if (!message.from)
             return;
-
-        let seller = await db.findSellerById(message.from.id, 'telegram_id');
-        if (seller === null)
-            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop());
-        
-        state.set(message.from.id, {id: "product_title"});
-        bot.sendMessage(message.from.id, TEXTS.askProductTitle());
+        await onAddProduct(message.from);
     });
     bot.onText(/\/cancel/, async (message) => {
         if (!message.from)
             return;
-        let userState = state.get(message.from.id);
-        if (userState) {
-            state.set(message.from.id, undefined)
-            bot.sendMessage(message.from.id, TEXTS.cancelled());
-        }
+        await onCancel(message.from);
     });
     bot.onText(/\/remove/, async (message) => {
         if (!message.from)
             return;
-
-        let seller = await db.findSellerById(message.from.id, 'telegram_id');
-        if (seller === null)
-            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop());
-        
-        let openOrders = await db.query(`SELECT id FROM \`order\` WHERE seller_id=${seller.id} AND complete=0 LIMIT 1`);
-        if (openOrders.length > 0)
-            return bot.sendMessage(message.from.id, TEXTS.hasOpenOrders());
-            
-        await db.query(`DELETE FROM \`product\` WHERE seller=${seller.id}`);
-        await db.query(`DELETE FROM \`seller\` WHERE id=${seller.id}`);
-        return bot.sendMessage(message.from.id, TEXTS.shopRemoved());
+        await onRemoveShop(message.from);
     });
     bot.onText(/\/orders/, async (message) => {
         if (!message.from)
             return;
         let showActive = (message.text || "").toLowerCase().includes('active');
+        await onOrdersShow(message.from, showActive);
+    });
 
-        let seller = await db.findSellerById(message.from.id, 'telegram_id');
-        let buyer = await db.findBuyerById(message.from.id, 'telegram_id');
+    bot.on('callback_query', async (query) => {
+        if (!query || !query.from)
+            return;
+        bot.answerCallbackQuery(query.id);
+        let user = query.from;
+        let userState = state.get(query.from.id);
+        if (!userState && query.data === 'create_shop') {
+            await onShopCreating(user);
+        } else if (query.data === 'd' || query.data === 'p') {
+            if (await db.findSellerById(user.id, 'telegram_id') !== null)
+                return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}});
+            state.set(user.id, {id: 'shop_desc', is_digital: query.data==='d'});
+            bot.sendMessage(user.id, TEXTS.askDescription());
+        }
+    });
+    bot.on('message', async (message, metadata) => {
+        if (!message.from)
+            return;
+        let user : TelegramBot.User = message.from, seller : any;
+
+        if (message.text === keyboardCancel.text) {
+            await onCancel(user);
+            return;
+        }
+
+        let userState = state.get(user.id);
+        if ((seller = await db.findSellerById(user.id, 'telegram_id')) !== null) {
+            if (message.text === keyboardAllOrders.text ||
+                message.text === keyboardPendingOrders.text) {
+                await onOrdersShow(user, message.text === keyboardPendingOrders.text);
+            } else if (message.text === keyboardNewProduct.text) {
+                await onAddProduct(user);
+            } else if (message.text == keyboardRemoveShop.text) {
+                await onRemoveShop(user);
+            } else if (message.text == keyboardInfoShop.text) {
+                await onShopInfo(user);
+            } else {
+                if (!userState)
+                    return;// bot.sendMessage(user.id, TEXTS.help());
+
+                if (userState.id === 'product_title') {
+                    let title = message.text;
+                    if (typeof title !== 'string' || title.length < 2 || title.length > 256)
+                        return bot.sendMessage(user.id, TEXTS.badProductTitle(), cancelOptions);
+
+                    userState.title = title;
+                    userState.id = 'product_price';
+
+                    return bot.sendMessage(user.id, TEXTS.askProductPrice(), cancelOptions);
+                } else if (userState.id === 'product_price') {
+                    let priceText = message.text;
+                    if (typeof priceText !== 'string')
+                        return bot.sendMessage(user.id, TEXTS.badProductPrice(), cancelOptions);
+                    let price = parseFloat(priceText);
+
+                    if (isNaN(price) || price < 2)
+                        return bot.sendMessage(user.id, TEXTS.badProductPrice(), cancelOptions);
+                    
+                    userState.price = price;
+                    userState.id = 'product_image';
+
+                    return bot.sendMessage(user.id, TEXTS.askProductImage(), cancelOptions);
+                } else if (userState.id === 'product_image') {
+                    if (!message.document)
+                        return bot.sendMessage(user.id, TEXTS.badProductImagePhoto(), cancelOptions);
+
+                    let document : any = message.document;
+                    if (document.file_size > 1024 * 1024 * 10)
+                        return bot.sendMessage(user.id, TEXTS.badProductImageSize(), cancelOptions);
+                    if (!(['image/jpeg', 'image/png']).includes(document.mime_type))
+                        return bot.sendMessage(user.id, TEXTS.badProductImageType(), cancelOptions);
+
+                    let file = await bot.getFile(document.file_id);
+                    let url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
+                    https.get(url, (_req) => {
+                        if (!_req)
+                            return bot.sendMessage(user.id, TEXTS.badProductImageError(), cancelOptions);
+                        let image : Buffer[] = [];
+                        _req.on('data', chunk => image.push(chunk));
+                        _req.on('end', async () => {
+                            
+                            let imageBuffer = Buffer.concat(image);
+
+                            await db.query(db.insertQuery('product', {
+                                image: imageBuffer,
+                                title: userState.title,
+                                price: userState.price,
+                                count: 0,
+                                seller: seller.id,
+                                image_prefix: 'data:' + document.mime_type + ';base64,'
+                            }));
+
+                            state.set(user.id, undefined);
+                            bot.sendMessage(user.id, TEXTS.productAdded({
+                                title: userState.title,
+                                price_usd: userState.price.toFixed(2),
+                                price_grm: usd2grm(userState.price).toFixed(2)
+                            }), {parse_mode: "HTML", reply_markup: {
+                                keyboard: sellerKeyboard
+                            }});
+                        });
+                    }).on('error', (e) => {
+                        error(e);
+                        bot.sendMessage(user.id, TEXTS.badProductImageError(), cancelOptions);
+                    });
+
+                } else {
+                    //bot.sendMessage(message.from.id, TEXTS.help());
+                }
+            }
+        } else {
+            if (message.text == keyboardCreateShop.text) {
+                await onShopCreating(user);
+            } else if (userState && userState.id === 'shop_desc') {
+                let description = message.text;
+
+                if (!description || description.length < 2 || description.length > 256)
+                    return bot.sendMessage(user.id, TEXTS.badDescription(), cancelOptions);
+
+                userState.id = 'shop_address';
+                userState.description = description;
+                state.set(user.id, userState);
+
+                bot.sendMessage(user.id, TEXTS.askAddress(), {parse_mode: "HTML"});
+            } else if (userState && userState.id === 'shop_address') {
+                let address = message.text;
+                const bad = () => bot.sendMessage(user.id, TEXTS.badAddress(), cancelOptions);
+
+                if (!address)
+                    return bad();
+                
+                let addr;
+                try {
+                    addr = TONAddress.from(address);
+                } catch (e) {
+                    return bad();
+                }
+
+                await db.query(db.insertQuery('seller', {
+                    'telegram_id': user.id,
+                    title: name(user),
+                    link: user.username,
+                    description: userState.description,
+                    is_digital: userState.is_digital,
+                    address: addr.toString(),
+                    token: randomString(32),
+                    trades_count: 0
+                }));
+
+                state.set(user.id, undefined);
+                bot.sendMessage(user.id, TEXTS.shopDone({
+                    link: user.username || user.id
+                }), {
+                    parse_mode: "HTML",
+                    reply_markup: {
+                        keyboard: sellerKeyboard
+                    }
+                });
+            } else if (userState && userState.id === 'shop_type') {
+                if (message.text !== TEXTS.shopTypeDigitalButton() && message.text !== TEXTS.shopTypePhysicalButton())
+                    return bot.sendMessage(user.id, TEXTS.badShopType(), {reply_markup: {keyboard: [
+                           [{text: TEXTS.shopTypeDigitalButton()}, 
+                            {text: TEXTS.shopTypePhysicalButton()}], 
+                           [ keyboardCancel ]
+                    ]}});
+                if (await db.findSellerById(user.id, 'telegram_id') !== null)
+                    return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}});
+                state.set(user.id, {id: 'shop_desc', is_digital: message.text === TEXTS.shopTypeDigitalButton()});
+                bot.sendMessage(user.id, TEXTS.askDescription());
+            } else {
+                bot.sendMessage(user.id, TEXTS.welcome(), {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [ {text: keyboardCreateShop.text, callback_data: "create_shop"} ]
+                        ]
+                    }
+                });
+            } 
+        }
+    });
+
+    async function onCancel(user : TelegramBot.User) {
+        let userState = state.get(user.id);
+        if (userState) {
+            state.set(user.id, undefined);
+        }
+
+        let seller = await db.findSellerById(user.id, 'telegram_id');
+        let keyboard = seller !== null ? sellerKeyboard : [[keyboardCreateShop]];
+        bot.sendMessage(user.id, TEXTS.cancelled(), {
+            reply_markup: {
+                keyboard
+            }
+        });
+    }
+
+    async function onRemoveShop(user : TelegramBot.User) {
+        let seller = await db.findSellerById(user.id, 'telegram_id');
+        if (seller === null)
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}});
+        
+        let openOrders = await db.query(`SELECT id FROM \`order\` WHERE seller_id=${seller.id} AND complete=0 LIMIT 1`);
+        if (openOrders.length > 0)
+            return bot.sendMessage(user.id, TEXTS.hasOpenOrders(), {reply_markup: {keyboard: sellerKeyboard}});
+            
+        await db.query(`DELETE FROM \`product\` WHERE seller=${seller.id}`);
+        await db.query(`DELETE FROM \`seller\` WHERE id=${seller.id}`);
+        return bot.sendMessage(user.id, TEXTS.shopRemoved(), {
+            reply_markup: {
+                keyboard: [ [ keyboardCreateShop ] ]
+            }
+        });
+    }
+    
+    async function onShopCreating(user : TelegramBot.User) {
+        if (await db.findSellerById(user.id, 'telegram_id') !== null)
+            return bot.sendMessage(user.id, TEXTS.alreadyHaveShop());
+
+        state.set(user.id, {id: "shop_type"});
+        bot.sendMessage(user.id, TEXTS.askShopType(), {
+            reply_markup: {
+                // keyboard: [
+                //     [{text: TEXTS.shopTypeDigitalButton()}, 
+                //      {text: TEXTS.shopTypePhysicalButton()}], 
+                //     [ keyboardCancel ]
+                // ]
+                inline_keyboard: [
+                    [{text: TEXTS.shopTypeDigitalButton(), callback_data: 'd'}, 
+                     {text: TEXTS.shopTypePhysicalButton(), callback_data: 'p'}]
+                ]
+            }
+        });
+    }
+
+    async function onShopInfo(user : TelegramBot.User) {
+        let seller = await db.findSellerById(user.id, 'telegram_id');
+        if (seller === null)
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop());
+        
+        let products = await db.query(`SELECT * FROM product WHERE seller=${seller.id} AND deleted=0`);
+        bot.sendMessage(user.id, TEXTS.info({
+            shop_link: seller.link || seller.id,
+            products_count: products.length,
+        }) + products.map((product : any, i : number) => TEXTS.productInfo({
+            i: i+1,
+            title: product.title,
+            price: product.price.toFixed(2),
+            id: product.id
+        })).join('\n'), {parse_mode: "HTML", reply_markup: {
+            keyboard: sellerKeyboard
+        }});
+    }
+
+    async function onAddProduct(user: TelegramBot.User) {
+        let seller = await db.findSellerById(user.id, 'telegram_id');
+        if (seller === null)
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop());
+        
+        state.set(user.id, {id: "product_title"});
+        bot.sendMessage(user.id, TEXTS.askProductTitle());
+    }
+
+    async function onOrdersShow(user : TelegramBot.User, active : boolean = false) {
+
+        let seller = await db.findSellerById(user.id, 'telegram_id');
+        let buyer = await db.findBuyerById(user.id, 'telegram_id');
 
         if (seller === null && buyer === null)
-            return bot.sendMessage(message.from.id, TEXTS.noOrders());
+            return bot.sendMessage(user.id, TEXTS.noOrders());
         
         let conditions : string[] = [];
-        if (showActive)
+        if (active)
             conditions.push('complete=0');
         if (seller !== null)
             conditions.push('seller_id=' + seller.id);
@@ -555,7 +903,7 @@ export default (
         // let orders = await db.query(`SELECT * FROM \`order\` WHERE 
         //                             ${conditions.join(' AND ')} LIMIT 100`);
         if (orders.length == 0)
-            return bot.sendMessage(message.from.id, TEXTS.noOrders());
+            return bot.sendMessage(user.id, TEXTS.noOrders());
 
         const symbols = {
             done: ['✅ ', 'Successfully done.'],
@@ -563,17 +911,17 @@ export default (
             cancelled: ['🛑 ', 'Cancelled.'],
             waitingPayment: ['💸 ', 'Waiting payment...'],
             waitingDispute: ['❓ ', 'Processing dispute...'],
-            waitingConfirmation: ['⌛ ', 'Waiting seller confirmation...']
+            waitingConfirmation: ['⌛ ', 'Waiting seller confirmation...'],
+            paid: ['💰 ', 'Paid, pending...']
         }
         
         let ordersText = `Orders: (${
             seller !== null ? 
                 '<b>' + TEXTS.escapeHTML(seller.title) + '</b> seller' :
                 '<b>' + TEXTS.escapeHTML(buyer.name) + '</b> buyers' 
-            })\n`;
-        if (!showActive)
-            ordersText += '/orders_active — show only active orders\n';
-        ordersText += '\n';
+            })\n\n`;
+        // if (!actjve)
+        //     ordersText += '/orders_active — show only active orders\n';
         for (let order of orders) {
             let status = ['', ''];
             if (order.success)
@@ -588,173 +936,21 @@ export default (
                 status = symbols.refunded;
             else if (!order.complete && !order.confirmed)
                 status = symbols.waitingConfirmation;
+            else if (!order.complete && order.paid)
+                status = symbols.paid;
 
             let link = TEXTS.domain + '/order/?' + (seller !== null ? order.seller_token : order.buyer_token);
             let productLink = TEXTS.domain + '/product/' + order.product_id;
             ordersText += `${status[0]}<a href="${link}"><b>Order #${order.id}</b></a> <i><a href="${productLink}">${TEXTS.escapeHTML(order.product_title)}</a></i>${status[0].length>0?' — ':''}${status[1]}` + '\n';
         }
 
-        bot.sendMessage(message.from.id, ordersText, {parse_mode: "HTML"});
-    })
-
-    bot.on('message', async (message, metadata) => {
-        if (!message.from)
-            return;
-        let user : TelegramBot.User = message.from, seller : any;
-
-        if ((seller = await db.findSellerById(user.id, 'telegram_id')) !== null) {
-            let userState = state.get(user.id);
-            if (!userState)
-                return;// bot.sendMessage(user.id, TEXTS.help());
-
-            if (userState.id === 'product_title') {
-                let title = message.text;
-                if (typeof title !== 'string' || title.length < 2 || title.length > 256)
-                    return bot.sendMessage(user.id, TEXTS.badProductTitle());
-
-                userState.title = title;
-                userState.id = 'product_price';
-
-                return bot.sendMessage(user.id, TEXTS.askProductPrice());
-            } else if (userState.id === 'product_price') {
-                let priceText = message.text;
-                if (typeof priceText !== 'string')
-                    return bot.sendMessage(user.id, TEXTS.badProductPrice());
-                let price = parseFloat(priceText);
-
-                if (isNaN(price) || price < 2)
-                    return bot.sendMessage(user.id, TEXTS.badProductPrice());
-                
-                userState.price = price;
-                userState.id = 'product_image';
-
-                return bot.sendMessage(user.id, TEXTS.askProductImage());
-            } else if (userState.id === 'product_image') {
-                if (!message.document)
-                    return bot.sendMessage(user.id, TEXTS.badProductImagePhoto());
-
-                let document : any = message.document;
-                if (document.file_size > 1024 * 1024 * 10)
-                    return bot.sendMessage(user.id, TEXTS.badProductImageSize());
-                if (!(['image/jpeg', 'image/png']).includes(document.mime_type))
-                    return bot.sendMessage(user.id, TEXTS.badProductImageType());
-
-                let file = await bot.getFile(document.file_id);
-                let url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-                https.get(url, (_req) => {
-                    if (!_req)
-                        return bot.sendMessage(user.id, TEXTS.badProductImageError());
-                    let image : Buffer[] = [];
-                    _req.on('data', chunk => image.push(chunk));
-                    _req.on('end', async () => {
-                        
-                        let imageBuffer = Buffer.concat(image);
-
-                        await db.query(db.insertQuery('product', {
-                            image: imageBuffer,
-                            title: userState.title,
-                            price: userState.price,
-                            count: 0,
-                            seller: seller.id,
-                                    // data:image/png;base64,
-                            image_prefix: 'data:' + document.mime_type + ';base64,'
-                        }));
-
-                        state.set(user.id, undefined);
-                        bot.sendMessage(user.id, TEXTS.productAdded({
-                            title: userState.title,
-                            price_usd: userState.price.toFixed(2),
-                            price_grm: usd2grm(userState.price).toFixed(2)
-                        }), {parse_mode: "HTML"});
-                    });
-                }).on('error', (e) => {
-                    error(e);
-                    bot.sendMessage(user.id, TEXTS.badProductImageError());
-                });
-
-            } else {
-                //bot.sendMessage(message.from.id, TEXTS.help());
+        bot.sendMessage(user.id, ordersText, {
+            parse_mode: "HTML",
+            reply_markup: {
+                keyboard: sellerKeyboard
             }
-        } else if (!state.has(user.id)) {
-            bot.sendMessage(user.id, TEXTS.welcome(), {
-                reply_markup: <TelegramBot.InlineKeyboardMarkup> {
-                    inline_keyboard: [[{text: TEXTS.createShopButton(), callback_data: "create_shop"}]]
-                }
-            });
-        } else {
-            let userState = state.get(user.id);
-            if (!userState)
-                return;
-
-            if (userState.id === 'shop_desc') {
-                let description = message.text;
-
-                if (!description || description.length < 2 || description.length > 256)
-                    return bot.sendMessage(user.id, TEXTS.badDescription());
-
-                userState.id = 'shop_address';
-                userState.description = description;
-                state.set(user.id, userState);
-
-                bot.sendMessage(user.id, TEXTS.askAddress(), {parse_mode: "HTML"});
-            } else if (userState.id === 'shop_address') {
-                let address = message.text;
-                const bad = () => bot.sendMessage(user.id, TEXTS.badAddress());
-
-                if (!address)
-                    return bad();
-                
-                let addr;
-                try {
-                    addr = TONAddress.from(address);
-                } catch (e) {
-                    return bad();
-                }
-
-                await db.query(db.insertQuery('seller', {
-                    'telegram_id': user.id,
-                    title: name(user),
-                    link: user.username,
-                    description: userState.description,
-                    is_digital: userState.is_digital,
-                    address: addr.toString(),
-                    token: randomString(32),
-                    trades_count: 0
-                }));
-
-                state.set(user.id, undefined);
-                bot.sendMessage(user.id, TEXTS.shopDone());
-            }
-        }
-    });
-    // welcome -{create shop}-> is digital, description, address -> shop created
-
-    bot.on('callback_query', async (query) => {
-        let user = query.from;
-        if (!user)
-            return;
-
-        bot.answerCallbackQuery({callback_query_id: query.id});
-        if (query.data === 'create_shop') {
-            if (await db.findSellerById(user.id, 'telegram_id') !== null)
-                return bot.sendMessage(user.id, TEXTS.alreadyHaveShop());
-            
-            bot.sendMessage(user.id, TEXTS.askShopType(), {
-                reply_markup: {
-                    inline_keyboard: [[
-                        {text: TEXTS.shopTypeDigitalButton(), callback_data: "digital"},
-                        {text: TEXTS.shopTypePhysicalButton(), callback_data: "physical"}
-                    ]]
-                }
-            });
-        } else if (query.data === 'digital' || query.data === 'physical') {
-            if (await db.findSellerById(user.id, 'telegram_id') !== null)
-                return bot.sendMessage(user.id, TEXTS.alreadyHaveShop());
-            
-            state.set(user.id, {id: 'shop_desc', is_digital: query.data === 'digital'});
-            bot.sendMessage(user.id, TEXTS.askDescription());
-        }
-    });
+        });
+    }
 };
 
 class State {

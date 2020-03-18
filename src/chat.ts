@@ -37,7 +37,7 @@ const filter = (obj : any, keys : string[]) => {
     return o;
 }
 
-const actions = ['cancel', 'confirm'];
+const actions = ['cancel', 'confirm', 'release', 'refund', 'dispute'];
 export default (db : Database, io : Server) : Chat => {
     let clients : any = {};
     let whenOfflineCallback : any = null;
@@ -75,19 +75,23 @@ export default (db : Database, io : Server) : Chat => {
         message.id = message_id;
 
         let sent = [];
-        for (let client of clients[order]) {
-            if (!client.socket.disconnected) {
-                client.socket.emit('messages', [message]);
-                sent.push(client.id);
+        if (clients[order]) {
+            for (let client of clients[order]) {
+                if (!client.socket.disconnected) {
+                    client.socket.emit('messages', [message]);
+                    sent.push(client.id);
+                }
             }
         }
 
         //verbose(message);
-        if (!sent.includes(2) && whenOfflineCallback !== null) {
-            whenOfflineCallback(order, true, message);
-        }
-        if (!sent.includes(3) && whenOfflineCallback !== null) {
-            whenOfflineCallback(order, false, message);
+        if (from > 0) {
+            if (from !== 2 && !sent.includes(2) && whenOfflineCallback !== null) {
+                whenOfflineCallback(order, true, message);
+            }
+            if (from !== 3 && !sent.includes(3) && whenOfflineCallback !== null) {
+                whenOfflineCallback(order, false, message);
+            }
         }
     };
 
@@ -182,7 +186,7 @@ export default (db : Database, io : Server) : Chat => {
             for (let client of clients[order.id]) {
                 let filterKeys = ['id', 'paid', 'released', 'refunded', 'dispute', 'opened_time', 'paid_time', 'price_usd', 'price_grm', 'amount_usd', 'amount_grm', 'confirmed', 'complete', 'success'];
                 if (client.id === 2)
-                    filterKeys.push('address');
+                    filterKeys.push('address', 'token', 'key');
                 
                 if (!client.socket.disconnected)
                     client.socket.emit('order', filter(order, filterKeys));
