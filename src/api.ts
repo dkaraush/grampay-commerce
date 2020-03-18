@@ -452,7 +452,7 @@ export default (
                 }), {parse_mode: "HTML"});
             }
         } else if (action === 'release' && fromBuyer) {
-            bch.release(order.key, seller.address);
+            await bch.release(order.key, seller.address);
             await db.query(`UPDATE \`order\` SET released=1, complete=1, dispute=0, success=1 WHERE id=${order.id};`)
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, false)) {
@@ -467,7 +467,7 @@ export default (
                 id: "release"
             }));
         } else if (action === 'refund' && !fromBuyer) {
-            bch.refund(order.key);
+            await bch.refund(order.key);
             await db.query(`UPDATE \`order\` SET refunded=1, complete=1, dispute=0 WHERE id=${order.id};`)
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, true)) {
@@ -508,7 +508,7 @@ export default (
                         SET paid_time=${paid_time}, paid=1
                         WHERE id=${order.id} `);
         bch.updateOrdersList();
-        chat.updateOrderData(order_id);
+        chat.updateOrderData(order);
         chat.send(order.id, 0, JSON.stringify({
             id: 'payment'
         }));
@@ -876,13 +876,6 @@ export default (
         if (seller === null && buyer === null)
             return bot.sendMessage(user.id, TEXTS.noOrders());
         
-        let conditions : string[] = [];
-        if (active)
-            conditions.push('complete=0');
-        if (seller !== null)
-            conditions.push('seller_id=' + seller.id);
-        if (buyer !== null)
-            conditions.push('buyer_id=' + buyer.id);
         let orders = await db.query(`
             SELECT order.id as 'id', 
                    order.seller_id as 'seller_id', 
@@ -899,7 +892,9 @@ export default (
                     product.title as 'product_title'
             FROM \`order\` 
             INNER JOIN product ON order.product_id=product.id
-            WHERE ${conditions.join(' AND ')}
+            WHERE (${active ? 'complete=0' : 'TRUE'}) AND 
+                  (${seller !== null ? 'seller_id=' + seller.id : 'FALSE'} OR 
+                   ${buyer !== null ? 'buyer_id=' + buyer.id : 'FALSE'})
             ORDER BY order.opened_time DESC
             LIMIT 50`);
         // let orders = await db.query(`SELECT * FROM \`order\` WHERE 
@@ -948,9 +943,9 @@ export default (
 
         bot.sendMessage(user.id, ordersText, {
             parse_mode: "HTML",
-            reply_markup: {
+            reply_markup: (seller !== null ? {
                 keyboard: sellerKeyboard
-            }
+            } : {keyboard: [[]]})
         });
     }
 };

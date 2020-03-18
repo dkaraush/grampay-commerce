@@ -186,8 +186,9 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
                 }
             }
         }
+        setTimeout(loop, 7000);
     }
-    let loopInterval = setInterval(loop, 10000);
+    loop();
     updateOrdersList();
 
     async function send(opt: number, msg : Buffer, withSignature : boolean = true) {
