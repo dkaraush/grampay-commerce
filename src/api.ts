@@ -971,8 +971,8 @@ export default (
                 status = symbols.waitingConfirmation;
             else if (!order.complete && order.paid)
                 status = symbols.paid;
-
-            let link = TEXTS.domain + '/order/?' + (seller !== null ? order.seller_token : order.buyer_token);
+            let isSeller = seller !== null && order.seller_id === seller.id;
+            let link = TEXTS.domain + '/order/?' + (isSeller ? order.seller_token : order.buyer_token);
             let productLink = TEXTS.domain + '/product/' + order.product_id;
             ordersText += `${status[0]}<a href="${link}"><b>Order #${order.id}</b></a> <i><a href="${productLink}">${TEXTS.escapeHTML(order.product_title)}</a></i>${status[0].length>0?' — ':''}${status[1]}` + '\n';
         }
