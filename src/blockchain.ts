@@ -197,7 +197,7 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         log('msghash:', msghash);
         log('privateKey:', privateKey);
         let signature = nacl.sign_detached(msghash, keypair.secretKey);
-        log('signature:', signature);
+        log('signature:', Buffer.from(new Uint8Array(Array.prototype.slice.apply(signature))));
         let parts = [
             new Uint8Array(new Uint16Array([seqno]).buffer).reverse(),
             new Uint8Array([opt])
@@ -223,7 +223,9 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         log('external message: ', cell.toString());
         let serializedCell = cell.serialize();
         log('boc: ' + serializedCell.toString('hex'));
+        client.setVerbosityLevel(10);
         await client.sendMessage(serializedCell);
+        client.setVerbosityLevel(0);
     }
     async function refundExternal (key: number) {
         log('refundExternal(' + key + ')');

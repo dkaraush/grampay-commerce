@@ -517,12 +517,12 @@ export default (
         let buyer = await db.findBuyerById(order.buyer_id);
         let product = await db.findProductById(order.product_id);
 
-        bot.sendMessage(seller.id, TEXTS.payNotificationSeller({
+        bot.sendMessage(seller.telegram_id, TEXTS.payNotificationSeller({
             from_name: buyer.name,
             order_token: order.seller_token,
             order_id: order.id
         }), {parse_mode: "HTML"});
-        bot.sendMessage(buyer.id, TEXTS.payNotificationBuyer({
+        bot.sendMessage(buyer.telegram_id, TEXTS.payNotificationBuyer({
             product_id: product.id,
             product_name: product.title,
             product_price_usd: order.price_usd.toFixed(2),
