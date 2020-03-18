@@ -121,6 +121,9 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         for (let orderData of blockchainOrdersData) {
             let ignores = ignoring.includes(orderData.index);
             if (orderData.status && orderData.escrowTime < (Date.now()/1000)) {
+                let order = await db.findOrderById(orderData.index, 'key');
+                if (order !== null)
+                    refundCallback(order.id);
                 refundExternal(orderData.index);
             } else {
 
@@ -154,11 +157,13 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
                             continue;
                         }
                     }
+                    ignoring.push(orderData.index);
                     paymentDoneCallback(exactToken.id, orderData.escrowTime);
                     delete waitingPayments[exactToken.id];
                 } else {
                     if (!ignores)
                         log('token was not found in orders list');
+                    ignoring.push(orderData.index);
                     // if (sameOrdersAmount.length > 0) {
                     //     if (!ignores)
                     //         warn('and there are ' + sameOrdersAmount.length + " orders with probably same amount");
@@ -182,7 +187,7 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
             }
         }
     }
-    let loopInterval = setInterval(loop, 5000);
+    let loopInterval = setInterval(loop, 10000);
     updateOrdersList();
 
     async function send(opt: number, msg : Buffer, withSignature : boolean = true) {

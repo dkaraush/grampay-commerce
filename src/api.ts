@@ -531,7 +531,9 @@ export default (
             fee_usd: (order.price_usd * fee).toFixed(2),
             fee_grm: (order.price_grm * fee).toFixed(2),
             total_usd: order.amount_usd.toFixed(2),
-            total_grm: order.amount_grm.toFixed(2)
+            total_grm: order.amount_grm.toFixed(2),
+            order_id: order.id,
+            order_token: order.buyer_token
         }), {parse_mode: "HTML"});
     });
     bch.whenRefund(async (order_id: number) => {
