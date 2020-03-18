@@ -84,8 +84,8 @@ File limit: 10MB.`),
     confirmNotification: _(`<b>{from_name}</b> confirmed <b><a href="${domain}/order/?{order_token}">Order #{order_id}</a></b>.
 You are welcome to pay the order.`),
 
-    releaseNotification: _(`<b>{from_name}</b> released {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
-    refundNotification:  _(`<b>{from_name}</b> refunded back {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
+    releaseNotification: _(`💸 <b>{from_name}</b> released {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
+    refundNotification:  _(`💸 <b>{from_name}</b> refunded back {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
 
     youDisputed: _(`You opened dispute in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.
 Funds of the order are frozen and waiting for support decision.`),
@@ -100,9 +100,9 @@ GramPay Fee ({fee_percent}%) — <b>\${fee_usd}</b> ({fee_grm} GRM)
 
 Link to the chat: <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>
 
-If there is no dispute and Gram has not been sent to the buyer, you will receive Gram back to your wallet automatically in 7 days.`),
+If there is no dispute and Gram has not been sent to the buyer, you will receive Gram back to your wallet automatically in <strike>7 days</strike> 4 hours (demo).`),
     payNotificationSeller: _(`💸 <b>{from_name}</b> paid <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>!
-Please note that you have <b>7 days</b> to fullfill the order. In case there is no confirmation from a buyer after the product has been sent, freeze the funds by opening a dispute.
+Please note that you have <strike>7 days</strike> <b>4 hours</b> (demo) to fullfill the order. In case there is no confirmation from a buyer after the product has been sent, freeze the funds by opening a dispute.
 
 Link to the chat: <a href="${domain}/order/?{order_token}"><b>Order #{order_id}</b></a>`),
 

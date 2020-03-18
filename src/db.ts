@@ -87,26 +87,26 @@ export default function (credentials : any) : Database {
         },
 
         findProductById: async function (id : number, field : string = 'id') {
-            return db.takeFirst(await db.query(`SELECT * FROM product WHERE ${field}=${id} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM product WHERE \`${field}\`=${id} LIMIT 1`));
         },
         findBuyerById: async function (id : number, field : string = 'id') {
-            return db.takeFirst(await db.query(`SELECT * FROM buyer WHERE ${field}=${id} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM buyer WHERE \`${field}\`=${id} LIMIT 1`));
         },
         findSellerById: async function (id : number, field : string = 'id') {
-            return db.takeFirst(await db.query(`SELECT * FROM seller WHERE ${field}=${id} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM seller WHERE \`${field}\`=${id} LIMIT 1`));
         },
         findOrderById: async function (id : number, field : string = 'id') {
-            return db.takeFirst(await db.query(`SELECT * FROM \`order\` WHERE ${field}=${id} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM \`order\` WHERE \`${field}\`=${id} LIMIT 1`));
         },
 
         findBuyerByToken: async function (token : string, field : string = 'token') {
-            return db.takeFirst(await db.query(`SELECT * FROM buyer WHERE ${field}=${esc(token)} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM buyer WHERE \`${field}\`=${esc(token)} LIMIT 1`));
         },
         findSellerByToken: async function (token : string, field : string = 'token') {
-            return db.takeFirst(await db.query(`SELECT * FROM seller WHERE ${field}=${esc(token)} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM seller WHERE \`${field}\`=${esc(token)} LIMIT 1`));
         },
         findOrderByIdAndToken: async function (productID : number, token : string, field : string = 'buyer_token') {
-            return db.takeFirst(await db.query(`SELECT * FROM \`order\` WHERE product_id=${productID} AND ${field}=${esc(token)} LIMIT 1`));
+            return db.takeFirst(await db.query(`SELECT * FROM \`order\` WHERE product_id=${productID} AND \`${field}\`=${esc(token)} LIMIT 1`));
         }
 	});
 };

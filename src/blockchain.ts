@@ -186,7 +186,7 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
                 }
             }
         }
-        setTimeout(loop, 7000);
+        setTimeout(loop, 3000);
     }
     loop();
     updateOrdersList();

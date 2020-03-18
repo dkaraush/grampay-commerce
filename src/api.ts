@@ -411,7 +411,7 @@ export default (
             product_name: product.title
         }), {parse_mode: "HTML"});
     });
-    chat.onProcessOrder(async (order_id: number, fromBuyer: boolean, action : string) => {
+    chat.onProcessOrder(async (order_id: number, fromBuyer: boolean, action : string, rate? : number) => {
         let order = await db.findOrderById(order_id);
         
         if (order.complete)
@@ -466,13 +466,14 @@ export default (
             chat.send(order.id, 0, JSON.stringify({
                 id: "release"
             }));
+            onOrderComplete(order.id, true);
         } else if (action === 'refund' && !fromBuyer) {
             await bch.refund(order.key);
             await db.query(`UPDATE \`order\` SET refunded=1, complete=1, dispute=0 WHERE id=${order.id};`)
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, true)) {
                 bot.sendMessage(buyer.telegram_id, TEXTS.refundNotification({
-                    from_name: seller.name,
+                    from_name: seller.title,
                     order_id: order.id,
                     order_token: order.buyer_token,
                     amount_grm: order.price_grm.toFixed(2)
@@ -481,11 +482,15 @@ export default (
             chat.send(order.id, 0, JSON.stringify({
                 id: "refund"
             }));
+            onOrderComplete(order.id, false);
         }
 
         if (action === 'dispute' && !order.dispute) {
             bch.freeze(order.key);
             await db.query(`UPDATE \`order\` SET dispute=1 WHERE id=${order.id}`);
+            chat.send(order.id, 0, JSON.stringify({
+                id: "dispute"
+            }));
             chat.updateOrderData(order.id);
             bot.sendMessage(buyer.telegram_id, 
                 (fromBuyer ? TEXTS.youDisputed : TEXTS.theyDisputed)({
@@ -498,8 +503,38 @@ export default (
                     order_token: order.seller_token
                 }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, false)});
         }
+
+        if (action === 'feedback' && typeof rate === 'number') {
+            rate = ~~rate;
+            if (rate < 1 || rate > 5)
+                return;
+            if (fromBuyer) {
+                if (order.buyer_rated)
+                    return;
+                await db.query(`UPDATE \`seller\` SET rates_count=rates_count+1, rates_sum=rates_sum+${rate} WHERE id=${seller.id}`);
+                await db.query(`UPDATE \`order\` SET buyer_rated=1 WHERE id=${order.id}`);
+            } else {
+                if (order.seller_rated)
+                    return;
+                await db.query(`UPDATE \`buyer\` SET rates_count=rates_count+1, rates_sum=rates_sum+${rate} WHERE id=${buyer.id}`);
+                await db.query(`UPDATE \`order\` SET seller_rated=1 WHERE id=${order.id}`);
+            }
+        }
     });
 
+    async function onOrderComplete(order_id: number, success : boolean) {
+        chat.send(order_id, 0, JSON.stringify({
+            id: "ask-feedback"
+        }));
+        if (success) {
+            let order = await db.findOrderById(order_id);
+            let buyer = await db.findBuyerById(order.buyer_id);
+            let seller = await db.findSellerById(order.seller_id);
+
+            await db.query(`UPDATE \`buyer\` SET purchases=purchases+1 WHERE id=${buyer.id}`);
+            await db.query(`UPDATE \`seller\` SET trades_count=trades_count+1 WHERE id=${seller.id}`);
+        }
+    }
 
     bch.whenPaymentDone(async (order_id:number, escrow_time:number) => {
         let order = await db.findOrderById(order_id);
@@ -508,7 +543,7 @@ export default (
                         SET paid_time=${paid_time}, paid=1
                         WHERE id=${order.id} `);
         bch.updateOrdersList();
-        chat.updateOrderData(order);
+        chat.updateOrderData(order.id);
         chat.send(order.id, 0, JSON.stringify({
             id: 'payment'
         }));
@@ -546,6 +581,7 @@ export default (
         chat.send(order.id, 0, JSON.stringify({
             id: "auto-refund"
         }));
+        onOrderComplete(order.id, false);
     });
 
     // bot

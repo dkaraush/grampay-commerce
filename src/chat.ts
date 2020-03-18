@@ -37,7 +37,7 @@ const filter = (obj : any, keys : string[]) => {
     return o;
 }
 
-const actions = ['cancel', 'confirm', 'release', 'refund', 'dispute'];
+const actions = ['cancel', 'confirm', 'release', 'refund', 'dispute', 'feedback'];
 export default (db : Database, io : Server) : Chat => {
     let clients : any = {};
     let whenOfflineCallback : any = null;
@@ -174,16 +174,17 @@ export default (db : Database, io : Server) : Chat => {
             }
             return false;
         },
-        updateOrderData: async (_order: any | number) => {
-            let order = _order;
-            if (typeof _order === 'number')
-                order = await db.findOrderById(_order);
+        updateOrderData: async (_order: number) => {
+            let order = await db.findOrderById(_order);
+            verbose(_order);
             if (!order)
                 return;
+            verbose(order);
             let orderClients = clients[order.id];
             if (!orderClients)
                 return;
-            for (let client of clients[order.id]) {
+            console.log(orderClients);
+            for (let client of orderClients) {
                 let filterKeys = ['id', 'paid', 'released', 'refunded', 'dispute', 'opened_time', 'paid_time', 'price_usd', 'price_grm', 'amount_usd', 'amount_grm', 'confirmed', 'complete', 'success'];
                 if (client.id === 2)
                     filterKeys.push('address', 'token', 'key');
