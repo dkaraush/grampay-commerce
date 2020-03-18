@@ -216,7 +216,7 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         external.storeUint(0, 4 + 2);
 
         let externalBuff = external.toBuffer();
-        let cell = new TON.BagOfCells(external.length(), externalBuff);
+        let cell = new TON.BagOfCells(externalBuff.length * 8, externalBuff);
         cell.putRef(
             new TON.BagOfCells(message.length * 8, message)
         );
