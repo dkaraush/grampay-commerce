@@ -220,7 +220,8 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         cell.putRef(
             new TON.BagOfCells(message.length * 8, message)
         );
-        log('external message: ', cell.toString());
+        log('external: [' + external.length() + '] ' + externalBuff.toString('hex'))
+        log('external message: \n', cell.toString());
         let serializedCell = cell.serialize();
         log('boc: ' + serializedCell.toString('hex'));
         client.setVerbosityLevel(10);
