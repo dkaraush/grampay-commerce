@@ -420,10 +420,12 @@ class BitString {
         return this.string.length;
     }
     toBuffer() : Buffer {
-        let length = Math.ceil(this.length() / 8)
+        let length = Math.ceil(this.length() / 8);
         let buff = Buffer.alloc(length);
         for (let i = 0; i < length; ++i)
             buff[i] = this.loadUint8(i * 8);
+        if (this.length() % 8 == 4)
+            buff[buff.length - 1] = buff[buff.length - 1] & 0x08;
         return buff;
     }
 }
