@@ -12,12 +12,12 @@ file-base +".pk" load-generate-keypair =: priv =: pub
 "code.fif" include =: code
 null =: libraries
 <b
+	0 16 u,
 	// hash 64 u,
 	// 0 8 i, x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
 b> =: msg
 <b
 	<b 
-		0 16 u,
 		0 8 u,
 		msg <s shash priv ed25519_sign B,
 		msg <s s,
@@ -25,8 +25,8 @@ b> =: msg
 b> =: message
 
 <b
- 	0 16 u,
  	pub B,
+ 	0 16 u,
  	dictnew dict,
 b> =: storage
 // "storage.dat" file>B B>boc =: storage

@@ -1,4 +1,4 @@
-// automatically generated from `/Users/dkaraush/ton/crypto/smartcont/stdlib.fc` `code.fc` 
+// automatically generated from `/Users/dkaraush/ton/crypto/smartcont/stdlib.fc` `./code.fc` 
 PROGRAM{
   DECLPROC recv_internal
   DECLPROC recv_external
@@ -81,19 +81,14 @@ PROGRAM{
     CTOS
     c4 PUSH
     CTOS
-    16 LDU
-    s0 s2 XCHG
-    16 LDU
-    s2 s1 PUXC
-    EQUAL
-    50 THROWIFNOT
+    SWAP
     8 LDU
-    s0 s3 XCHG
+    s0 s2 XCHG
     256 LDU
     s2 PUSH
     4 EQINT
     IFNOT:<{
-      s0 s4 XCHG
+      s0 s3 XCHG
       9 PUSHPOW2
       LDSLICEX
       DUP
@@ -101,22 +96,33 @@ PROGRAM{
       s0 s2 s3 XC2PU
       CHKSIGNU
       51 THROWIFNOT
-      ACCEPT
-      s0 s4 XCHG
+      s0 s3 XCHG
     }>
+    16 LDU
+    s0 s4 XCHG
+    16 LDU
+    s2 s1 PUXC
+    EQUAL
+    50 THROWIFNOT
+    s3 PUSH
+    4 EQINT
+    IFNOT:<{
+      ACCEPT
+    }>
+    s0 s4 XCHG
     LDDICT
     DROP
-    s2 PUSH
-    0 EQINT
     s3 PUSH
+    0 EQINT
+    s4 PUSH
     10 EQINT
     OR
     IFNOT:<{
       s0 s4 XCHG
       32 LDU
-      s3 PUSH
-      4 EQINT
       s4 PUSH
+      4 EQINT
+      s5 PUSH
       1 EQINT
       OR
       IF:<{
@@ -124,7 +130,7 @@ PROGRAM{
         32 PUSHINT
         DICTUDELGET
         NULLSWAPIFNOT
-        s5 PUSH
+        s6 PUSH
         4 EQINT
         IF:<{
           SWAP
@@ -162,14 +168,14 @@ PROGRAM{
           STGRAMS
           108 STU
           ENDC
-          3 PUSHINT
+          2 PUSHINT
           SENDRAWMSG
         }>ELSE<{
           DROP
         }>
         s0 s5 XCHG
       }>
-      s3 PUSH
+      s4 PUSH
       2 EQINT
       IF:<{
         s1 s5 PUXC
@@ -198,11 +204,11 @@ PROGRAM{
         STGRAMS
         108 STU
         ENDC
-        3 PUSHINT
+        2 PUSHINT
         SENDRAWMSG
         s0 s5 XCHG
       }>
-      s3 PUSH
+      s4 PUSH
       3 EQINT
       IF:<{
         s1 s5 PUSH2
@@ -231,7 +237,7 @@ PROGRAM{
       }>
       s0 s4 XCHG
     }>
-    s0 s2 XCHG
+    s0 s3 XCHG
     10 EQINT
     IF:<{
       WHILE:<{
@@ -249,7 +255,7 @@ PROGRAM{
     }>ELSE<{
       s3 POP
     }>
-    SWAP
+    s0 s2 XCHG
     INC
     NEWC
     16 STU

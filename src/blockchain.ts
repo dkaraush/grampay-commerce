@@ -9,6 +9,14 @@ const TON = require('ton.js');
 const sha256 = (str : Buffer) : Buffer => {
     return crypto.createHash('sha256').update(str).digest();
 };
+const makeOrderKey = (str : string) : number => {
+    let buff = Buffer.concat([
+        Buffer.alloc(4),
+        Buffer.from(str)
+    ]);
+    let hash = sha256(buff);
+    return Number(bigintBuffer.toBigIntBE(hash) & BigInt(4294967295));
+}
 
 type PaymentDoneCallback = (order_id : number, whenEscrow: number) => void;
 type RefundCallback = (order_id : number) => void;
@@ -19,14 +27,6 @@ interface OrderInfo {
 
 const randomToken = (n : number = 5, q : string = "qwertyuiopasdfghjklzxcvbnm") : string => 
     Array.from({length: n}, () => q[Math.round(Math.random() * (q.length - 1))]).join('');
-const makeOrderKey = (str : string) : number => {
-    let buff = Buffer.concat([
-        Buffer.alloc(4),
-        Buffer.from(str)
-    ]);
-    let hash = sha256(buff);
-    return Number(bigintBuffer.toBigIntBE(hash) & BigInt(4294967295));
-}
 
 
 // const newContract = function () {
@@ -195,13 +195,17 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
     loop();
     updateOrdersList();
 
-    async function send(opt: number, msg : Buffer, withSignature : boolean = true) {
+    async function send(opt: number, _msg : Buffer, withSignature : boolean = true) {
         let seqno;
         try {
             seqno = (await client.runMethod(address, 'seqno')).stack[0].number;
         } catch (e) { return error(e); }
         log('seqno: ' + seqno);
 
+        let msg = Buffer.concat([
+            new Uint8Array(new Uint16Array([seqno]).buffer).reverse(),
+            _msg
+        ]);
         log('msg:', msg);
         let msghash = sha256((new TON.BagOfCells(msg.length*8, msg)).cellData());
         log('msghash:', msghash);
@@ -209,7 +213,6 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         let signature = nacl.sign_detached(msghash, keypair.secretKey);
         log('signature:', Buffer.from(new Uint8Array(Array.prototype.slice.apply(signature))));
         let parts = [
-            new Uint8Array(new Uint16Array([seqno]).buffer).reverse(),
             new Uint8Array([opt])
         ];
         if (withSignature)

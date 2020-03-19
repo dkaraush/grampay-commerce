@@ -50,10 +50,7 @@
 
 () recv_external (slice in_msg_) impure {
 	slice in_msg = begin_parse(in_msg_~load_ref());
-
 	slice data = get_data().begin_parse();
-	int seqno = data~load_uint(16);
-	throw_unless(50, seqno == in_msg~load_uint(16)); ;; bad seqno
 
 	int opt = in_msg~load_uint(8);
 	int pub = data~load_uint(256);
@@ -62,6 +59,11 @@
 		var signature = in_msg~load_bits(512);
 		var hash = slice_hash(in_msg);
 		throw_unless(51, check_signature(hash, signature, pub));
+	}
+
+	int seqno = data~load_uint(16);
+	throw_unless(50, seqno == in_msg~load_uint(16)); ;; bad seqno
+	ifnot (opt == 4) {
 		accept_message();
 	}
 
@@ -88,7 +90,7 @@
 						.store_slice(order~load_bits(264))
 						.store_grams(order~load_uint(64))
 						.store_uint(0, 108)
-					.end_cell(), 3
+					.end_cell(), 2
 				);
 			}
 		}
@@ -104,7 +106,7 @@
 					.store_slice(in_msg~load_bits(264))
 					.store_grams(amount / 100 * 98)
 					.store_uint(0, 108)
-				.end_cell(), 3);
+				.end_cell(), 2);
 		}
 
 		if (opt == 3) {

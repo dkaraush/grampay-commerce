@@ -23,7 +23,7 @@ const unix = () => Math.floor(new Date().getTime() / 1000);
 const name = (data : any) => {
     let a = ([data.first_name, data.last_name]).filter(x => !!x);
     if (a.length == 0)
-        return data.username || "";
+        return data.username || "nameless";
     return a.join(' ');
 }
 const filter = (obj : any, keys : string[]) => {
@@ -429,7 +429,7 @@ export default (
                 id: "cancel",
                 who: fromBuyer ? 'buyer' : 'seller'
             }));
-            
+
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, !fromBuyer)) {
                 bot.sendMessage((fromBuyer ? seller : buyer).telegram_id, TEXTS.cancelNotification({
@@ -781,22 +781,29 @@ export default (
                     addr = TONAddress.from(address);
                 } catch (e) {
                     return bad();
-                }
+                }   
 
-                await db.query(db.insertQuery('seller', {
+                let link = null;
+                if (user.username && (await db.findSellerByToken(user.username, 'link')) === null)
+                    link = user.username;
+
+                let insertOptions = await db.query(db.insertQuery('seller', {
                     'telegram_id': user.id,
                     title: name(user),
-                    link: user.username,
+                    link: link,
                     description: userState.description,
                     is_digital: userState.is_digital,
                     address: addr.toString(),
                     token: randomString(32),
                     trades_count: 0
                 }));
+                let id = insertOptions.insertId;
+                if (link == null)
+                    link = id;
 
                 state.set(user.id, undefined);
                 bot.sendMessage(user.id, TEXTS.shopDone({
-                    link: user.username || user.id
+                    link
                 }), {
                     parse_mode: "HTML",
                     reply_markup: {
