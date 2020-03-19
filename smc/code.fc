@@ -130,8 +130,8 @@
 
 	set_data(
 		begin_cell()
-			.store_uint(seqno + 1, 16)
 			.store_uint(pub, 256)
+			.store_uint(seqno + 1, 16)
 			.store_dict(orders)
 		.end_cell()
 	);
@@ -188,5 +188,6 @@ tuple data() method_id {
 
 int seqno() method_id {
 	var data = get_data().begin_parse();
+	data~skip_bits(256);
 	return data~load_uint(16);
 }

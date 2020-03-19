@@ -37,7 +37,7 @@ Pros and cons:
 
 **-** We don't see whether release/refund was buyer's/seller's decision, or this was decided by GramPay itself while dispute. The only thing we can know, is that this decision was done while dispute or not. But these actions are done by GramPay.
 
-I had an idea to make full on-chain market, where each buyer and seller has its own private key to sign messages, but I thought, that storage fees of saving all public keys and checking them probably doesn't worth it. This is a compromise.
+I had an idea to make full on-chain market, where each buyer and seller has its own private key to sign messages, but I thought, that storage fees of saving all public keys and checking them probably doesn't worth it. However, after this contest maybe I will reconsider my opinion.
 
 
 ## Technical Details
@@ -51,11 +51,36 @@ For example, "test" => x{0000000074657374} => 274DA87ADB56666DDD79E8E2EE116DBF99
 Other more boring and technical stuff is described here:
 
 External message:
+```
+[uint8] opt
+    - 0 = Contract creation message
+    - 1 = Refund (send back where payment has been received)
+    - 2 = Release (send to specific address)
+    - 3 = Freeze (set status of saved order to 0)
+    - 4 = Auto-refund
+    - 10 = Send raw message
+[uint256] signature of message (if opt != 4)
+{
+    [uint16] seqno
+    [uint32] order ID (if opt != 0 && opt != 10)
+    [int8 + uint256] address where to release (if opt == 2)
+} : message
+```
 
-
-
-
-## Some TODO stuff (or things, that would be good to change)
-
-1. Fees are not calculated at all. Probably, to not lose 
-2. `seqno` is not under the signature. This was done just to simplify smart-contract code. I don't that as a big issue
+Get-methods:
+```
+seqno() => number
+status(number) => number
+    Returns status of the order.
+    = -1  - not found in list
+    =  0  - frozen (can't auto-refund)
+    =  1  - can auto-refund (time is calculated)
+    =  2  - can't auto-refund yet
+data() => tuple[tuple[number, ]]:
+    Returns all saved orders. Variables:
+    [number] status (0 = frozen, 1 = waiting auto-refund)
+    [number] escrow time (when auto-refund can happen), in unix seconds
+    [number] workchain (source of payment)
+    [slice]  address (source of payment)
+    [number] amount in nanograms (98% aren't calcuted, in case of refund)
+```

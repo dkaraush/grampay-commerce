@@ -257,10 +257,11 @@ PROGRAM{
     }>
     s0 s2 XCHG
     INC
+    s0 s2 XCHG
     NEWC
-    16 STU
-    s1 s2 XCHG
     256 STU
+    s1 s2 XCHG
+    16 STU
     STDICT
     ENDC
     c4 POP
@@ -348,6 +349,8 @@ PROGRAM{
   seqno PROC:<{
     c4 PUSH
     CTOS
+    8 PUSHPOW2
+    SDSKIPFIRST
     16 LDU
     DROP
   }>
