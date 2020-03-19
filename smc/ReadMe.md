@@ -77,11 +77,13 @@ status(number) => number
     =  0  - frozen (can't auto-refund)
     =  1  - can auto-refund (time is calculated)
     =  2  - can't auto-refund yet
-data() => tuple[tuple[number, ]]:
+data() => tuple[tuple[number, ...]]:
     Returns all saved orders. Variables:
     [number] status (0 = frozen, 1 = waiting auto-refund)
     [number] escrow time (when auto-refund can happen), in unix seconds
     [number] workchain (source of payment)
     [slice]  address (source of payment)
-    [number] amount in nanograms (98% aren't calcuted, in case of refund)
+    [number] amount in nanograms (98% isn't calcuted, in case of refund)
 ```
+
+**TODO**: guarantee, that funds can't be removed by `opt=10`. I thought about counting each order amount to limit transactions, but didn't have enough time for that, sorry. Taking GramPay fee from the contract is quite important.
