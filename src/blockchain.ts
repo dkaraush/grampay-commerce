@@ -117,75 +117,77 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
     let ignoring : any[] = [];
     async function loop() {
         log('loop()');
-        let blockchainOrdersData = await getBlockchainOrders(client, address);
-        for (let orderData of blockchainOrdersData) {
-            let ignores = ignoring.includes(orderData.index);
-            if (orderData.status && orderData.escrowTime < (Date.now()/1000)) {
-                let order = await db.findOrderById(orderData.index, 'key');
-                if (order !== null)
-                    refundCallback(order.id);
-                refundExternal(orderData.index);
-            } else {
+        try {
+            let blockchainOrdersData = await getBlockchainOrders(client, address);
+            for (let orderData of blockchainOrdersData) {
+                let ignores = ignoring.includes(orderData.index);
+                if (orderData.status && orderData.escrowTime < (Date.now()/1000)) {
+                    let order = await db.findOrderById(orderData.index, 'key');
+                    if (order !== null)
+                        refundCallback(order.id);
+                    refundExternal(orderData.index);
+                } else {
 
-                let amount = orderData.amount;
-                let sameOrdersAmount = [];
-                let exactToken = null;
-                for (let waitingPaymentID in waitingPayments) {
-                    let waitingPayment = waitingPayments[waitingPaymentID];
-                    if (Math.abs(amount - waitingPayment) < normalDiff)
-                        sameOrdersAmount.push(waitingPayment);
-                    if (waitingPayment.key == orderData.index) {
-                        exactToken = waitingPayment;
-                        break;
-                    }
-                }
-
-                if (!ignores) {
-                    log('order index: #' + orderData.index);
-                }
-
-                if (exactToken) {
-                    if (!ignores)
-                        log("received payment with exact token (" + orderData.index + ") for " + orderData.amount);
-                    if (Math.abs(amount - exactToken.amount) > normalDiff) {
-                        if (!ignores)
-                            warn('but, we received ' + orderData.amount + ', when ' + exactToken.amount + ' was needed');
-                        if (orderData.amount < exactToken.amount) {
-                            if (!ignores)
-                                warn('and that is less than we expected => ignoring');
-                            ignoring.push(orderData.index);
-                            continue;
+                    let amount = orderData.amount;
+                    let sameOrdersAmount = [];
+                    let exactToken = null;
+                    for (let waitingPaymentID in waitingPayments) {
+                        let waitingPayment = waitingPayments[waitingPaymentID];
+                        if (Math.abs(amount - waitingPayment) < normalDiff)
+                            sameOrdersAmount.push(waitingPayment);
+                        if (waitingPayment.key == orderData.index) {
+                            exactToken = waitingPayment;
+                            break;
                         }
                     }
-                    ignoring.push(orderData.index);
-                    paymentDoneCallback(exactToken.id, orderData.escrowTime);
-                    delete waitingPayments[exactToken.id];
-                } else {
-                    if (!ignores)
-                        log('token was not found in orders list');
-                    ignoring.push(orderData.index);
-                    // if (sameOrdersAmount.length > 0) {
-                    //     if (!ignores)
-                    //         warn('and there are ' + sameOrdersAmount.length + " orders with probably same amount");
-                    //     if (sameOrdersAmount.length == 1) {
-                    //         let order = sameOrdersAmount[0];
-                    //         warn('ok, let\'s think that ' + order.id + ' (' + order.amount + ' GRM) is probably related to ' + orderData.index + ' (' + orderData.amount + ' GRM)');
-                    //         paymentDoneCallback(order.id, orderData.escrowTime);
-                    //         delete waitingPayments[order.id];
-                    //     } else {
-                    //         if (!ignores)
-                    //             warn('too many orders with same amount, gash... should ignore that');
-                    //         ignoring.push(orderData.index);
-                    //         continue;
-                    //     }
-                    // } else {
-                    //     if (!ignores)
-                    //         warn('and it doesnt seem to be any orders with the same amount (' + amount + ')');
-                    //     ignoring.push(orderData.index);
-                    // }
+
+                    if (!ignores) {
+                        log('order index: #' + orderData.index);
+                    }
+
+                    if (exactToken) {
+                        if (!ignores)
+                            log("received payment with exact token (" + orderData.index + ") for " + orderData.amount);
+                        if (Math.abs(amount - exactToken.amount) > normalDiff) {
+                            if (!ignores)
+                                warn('but, we received ' + orderData.amount + ', when ' + exactToken.amount + ' was needed');
+                            if (orderData.amount < exactToken.amount) {
+                                if (!ignores)
+                                    warn('and that is less than we expected => ignoring');
+                                ignoring.push(orderData.index);
+                                continue;
+                            }
+                        }
+                        ignoring.push(orderData.index);
+                        paymentDoneCallback(exactToken.id, orderData.escrowTime);
+                        delete waitingPayments[exactToken.id];
+                    } else {
+                        if (!ignores)
+                            log('token was not found in orders list');
+                        ignoring.push(orderData.index);
+                        // if (sameOrdersAmount.length > 0) {
+                        //     if (!ignores)
+                        //         warn('and there are ' + sameOrdersAmount.length + " orders with probably same amount");
+                        //     if (sameOrdersAmount.length == 1) {
+                        //         let order = sameOrdersAmount[0];
+                        //         warn('ok, let\'s think that ' + order.id + ' (' + order.amount + ' GRM) is probably related to ' + orderData.index + ' (' + orderData.amount + ' GRM)');
+                        //         paymentDoneCallback(order.id, orderData.escrowTime);
+                        //         delete waitingPayments[order.id];
+                        //     } else {
+                        //         if (!ignores)
+                        //             warn('too many orders with same amount, gash... should ignore that');
+                        //         ignoring.push(orderData.index);
+                        //         continue;
+                        //     }
+                        // } else {
+                        //     if (!ignores)
+                        //         warn('and it doesnt seem to be any orders with the same amount (' + amount + ')');
+                        //     ignoring.push(orderData.index);
+                        // }
+                    }
                 }
             }
-        }
+        } catch(e) {error(e)}
         setTimeout(loop, 3000);
     }
     loop();

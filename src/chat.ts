@@ -153,7 +153,7 @@ export default (db : Database, io : Server) : Chat => {
             for (let i = 0; i < clients[order.id].length; ++i)
                 if (clients[order.id][i].uniid === uniid)
                     clients[order.id].splice(i, 1);
-        })
+        });
     });
 
     return <Chat> {
@@ -176,21 +176,21 @@ export default (db : Database, io : Server) : Chat => {
         },
         updateOrderData: async (_order: number) => {
             let order = await db.findOrderById(_order);
-            verbose(_order);
             if (!order)
                 return;
-            verbose(order);
             let orderClients = clients[order.id];
             if (!orderClients)
                 return;
-            console.log(orderClients);
             for (let client of orderClients) {
                 let filterKeys = ['id', 'paid', 'released', 'refunded', 'dispute', 'opened_time', 'paid_time', 'price_usd', 'price_grm', 'amount_usd', 'amount_grm', 'confirmed', 'complete', 'success'];
                 if (client.id === 2)
                     filterKeys.push('address', 'token', 'key');
                 
-                if (!client.socket.disconnected)
-                    client.socket.emit('order', filter(order, filterKeys));
+                if (!client.socket.disconnected) {
+                    client.socket.emit('order', Object.assign(filter(order, filterKeys), {
+                        rated: client.id === 2 ? order.buyer_rated : order.seller_rated
+                    }));
+                }
             }
         }
     };

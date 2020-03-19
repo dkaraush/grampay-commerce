@@ -28,12 +28,12 @@ Link to the chat: <b><a href=\"${domain}/order/?{token}\">Order #{order_id}</a><
     doesntHaveShop: _('Missing shop.'),
     
     askShopType: _('Please select the type of a product that you want to sell?'),
-    badShopType: _('Please, click at one of buttons in the keyboard menu.'),
+    badShopType: _('Please,choose a command in a keyboard menu.'),
     shopTypeDigitalButton: _('☁️ Digital Goods'),
     shopTypePhysicalButton: _('🍏 Physical Items'),
 
-    askDescription: _(`Great! Write a description of your shop. From 2 to 256 symbols.`),
-    badDescription: _('Oh, bad description. Have you read about from 2 to 256 symbols limit?'),
+    askDescription: _(`Great! Write a description of your shop. From 2 to 512 symbols.`),
+    badDescription: _('Oh, that is a bad description. There is a limit (2 to 512 symbols) '),
 
     askAddress: _(`Nice! The last step: give us an address to your Gram wallet.
 <a href='https://wallet.ton.org/'>Link to the official Gram Wallet.</a>`),
@@ -60,7 +60,7 @@ Products count: {products_count}
     productWasRemoved: _("Product was removed."),
 
     askProductTitle: _('Write your product\'s title:'),
-    badProductTitle: _('Bad product title. Must be from 2 to 256 symbols.'),
+    badProductTitle: _('Bad product title. Must be from 2 to 512 symbols.'),
 
     askProductImage: _(`Now send please an image of your product. It would be shown in a square shape.
 File limit: 10MB.`),

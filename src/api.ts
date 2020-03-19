@@ -476,7 +476,7 @@ export default (
                     from_name: seller.title,
                     order_id: order.id,
                     order_token: order.buyer_token,
-                    amount_grm: order.price_grm.toFixed(2)
+                    amount_grm: order.amount_grm.toFixed(2)
                 }), {parse_mode: "HTML"});
             }
             chat.send(order.id, 0, JSON.stringify({
@@ -519,6 +519,7 @@ export default (
                 await db.query(`UPDATE \`buyer\` SET rates_count=rates_count+1, rates_sum=rates_sum+${rate} WHERE id=${buyer.id}`);
                 await db.query(`UPDATE \`order\` SET seller_rated=1 WHERE id=${order.id}`);
             }
+            chat.updateOrderData(order.id);
         }
     });
 
@@ -684,7 +685,7 @@ export default (
 
                 if (userState.id === 'product_title') {
                     let title = message.text;
-                    if (typeof title !== 'string' || title.length < 2 || title.length > 256)
+                    if (typeof title !== 'string' || title.length < 2 || title.length > 512)
                         return bot.sendMessage(user.id, TEXTS.badProductTitle(), cancelOptions);
 
                     userState.title = title;
@@ -758,7 +759,7 @@ export default (
             } else if (userState && userState.id === 'shop_desc') {
                 let description = message.text;
 
-                if (!description || description.length < 2 || description.length > 256)
+                if (!description || description.length < 2 || description.length > 512)
                     return bot.sendMessage(user.id, TEXTS.badDescription(), cancelOptions);
 
                 userState.id = 'shop_address';
