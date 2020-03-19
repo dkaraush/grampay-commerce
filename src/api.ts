@@ -414,7 +414,7 @@ export default (
     chat.onProcessOrder(async (order_id: number, fromBuyer: boolean, action : string, rate? : number) => {
         let order = await db.findOrderById(order_id);
         
-        if (order.complete)
+        if (order.complete && action !== 'feedback')
             return;
         
         let seller = await db.findSellerById(order.seller_id),
@@ -429,7 +429,7 @@ export default (
                 id: "cancel",
                 who: fromBuyer ? 'buyer' : 'seller'
             }));
-
+            
             chat.updateOrderData(order.id);
             if (!chat.isOnline(order.id, !fromBuyer)) {
                 bot.sendMessage((fromBuyer ? seller : buyer).telegram_id, TEXTS.cancelNotification({
@@ -511,12 +511,12 @@ export default (
             if (fromBuyer) {
                 if (order.buyer_rated)
                     return;
-                await db.query(`UPDATE \`seller\` SET rates_count=rates_count+1, rates_sum=rates_sum+${rate} WHERE id=${seller.id}`);
+                await db.query(`UPDATE \`seller\` SET rate_count=rate_count+1, rate_sum=rate_sum+${rate} WHERE id=${seller.id}`);
                 await db.query(`UPDATE \`order\` SET buyer_rated=1 WHERE id=${order.id}`);
             } else {
                 if (order.seller_rated)
                     return;
-                await db.query(`UPDATE \`buyer\` SET rates_count=rates_count+1, rates_sum=rates_sum+${rate} WHERE id=${buyer.id}`);
+                await db.query(`UPDATE \`buyer\` SET rate_count=rate_count+1, rate_sum=rate_sum+${rate} WHERE id=${buyer.id}`);
                 await db.query(`UPDATE \`order\` SET seller_rated=1 WHERE id=${order.id}`);
             }
             chat.updateOrderData(order.id);
@@ -574,6 +574,8 @@ export default (
     });
     bch.whenRefund(async (order_id: number) => {
         let order = await db.findOrderById(order_id);
+        if (order.complete)
+            return;
         await db.query(`UPDATE \`order\`
                         SET complete=1, refunded=1
                         WHERE id=${order.id}`);

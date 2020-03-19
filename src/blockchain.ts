@@ -188,6 +188,8 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
                 }
             }
         } catch(e) {error(e)}
+
+        log('scheduled next loop()...')
         setTimeout(loop, 3000);
     }
     loop();

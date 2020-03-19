@@ -142,10 +142,7 @@ export default (db : Database, io : Server) : Chat => {
 
         if (processOrderCallback !== null) {
             for (let actionName of actions) {
-                socket.on('order-' + actionName, async (...args: any[]) => {
-                    await processOrderCallback.apply(null, [order.id, id === 2, actionName].concat(args));
-                    // await db.findOrderById(order.id);
-                });
+                socket.on('order-' + actionName, processOrderCallback.bind(null, order.id, id === 2, actionName));
             }
         }
 
