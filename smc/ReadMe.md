@@ -66,6 +66,7 @@ External message:
     [int8 + uint256] address where to release (if opt == 2)
 } : message
 ```
+**Fun fact**: before writing this document, seqno was out of message. I understood, that leaving only order ID in message actually gives an ability to send another messages with the same order ID without having the private key. For example, if `freeze` is sent with only order id and `refund` is also sent with order id only, in this case signatures would be the same and private key is not needed. Fixed. :P
 
 Get-methods:
 ```
