@@ -1,0 +1,31 @@
+"TonUtil.fif" include
+
+{
+    ."earn.fif {file-base} {seqno} {dest}" cr
+    0 halt
+} : usage
+
+$# 3 = not { usage } if
+$1 =: file-base
+file-base +".addr" load-address 2=: src_addr
+$2 (number) 1 = not { usage } if =: seqno
+$3 parse-smc-addr drop 2=: dest
+
+file-base +".pk" load-keypair swap drop =: priv
+
+<b
+    seqno 16 u,
+    dest addr,
+b> =: msg
+
+<b
+    b{1000100} s, src_addr addr, 0 Gram, b{00} s,
+    <b 
+        11 8 u,
+        msg <s shash priv ed25519_sign B,
+		msg <s s,
+    b> ref,
+b> dup
+<s csr.
+."Saved to " file-base type ."-query.boc"  cr
+boc>B file-base +"-query.boc" B>file

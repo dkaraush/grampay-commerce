@@ -86,6 +86,8 @@ You are welcome to pay the order.`),
 
     releaseNotification: _(`💸 <b>{from_name}</b> released {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
     refundNotification:  _(`💸 <b>{from_name}</b> refunded back {amount_grm} GRM to your wallet from <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.`),
+    autoRefundNoitificationBuyer: _(`↩️ Your funds in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b> were automatically refunded.`),
+    autoRefundNoitificationSeller: _(`↩️ <b>{from_name}</b> funds in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b> were automatically refunded.`),
 
     youDisputed: _(`You opened dispute in <b><a href="${domain}/order?{order_token}">Order #{order_id}</a></b>.
 Funds of the order are frozen and waiting for support decision.`),

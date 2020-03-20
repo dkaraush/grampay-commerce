@@ -1,11 +1,17 @@
 // automatically generated from `/Users/dkaraush/ton/crypto/smartcont/stdlib.fc` `./code.fc` 
 PROGRAM{
+  DECLPROC balance
   DECLPROC recv_internal
   DECLPROC recv_external
   DECLPROC orders
   101642 DECLMETHOD status
+  82710 DECLMETHOD earning
   100194 DECLMETHOD data
   85143 DECLMETHOD seqno
+  balance PROC:<{
+    BALANCE
+    FIRST
+  }>
   recv_internal PROC:<{
     s2 PUSH
     500000000 PUSHINT
@@ -115,7 +121,7 @@ PROGRAM{
     s3 PUSH
     0 EQINT
     s4 PUSH
-    10 EQINT
+    11 EQINT
     OR
     IFNOT:<{
       s0 s4 XCHG
@@ -238,20 +244,59 @@ PROGRAM{
       s0 s4 XCHG
     }>
     s0 s3 XCHG
-    10 EQINT
+    11 EQINT
     IF:<{
-      WHILE:<{
-        s3 PUSH
-        SREFS
-      }>DO<{
-        s0 s3 XCHG
-        8 LDU
-        LDREF
-        s0 s2 XCHG
-        SENDRAWMSG
-        s0 s3 XCHG
+      1000000000 PUSHINT
+      -1 PUSHINT
+      UNTIL:<{
+        s4 PUSH
+        32 PUSHINT
+        DICTUGETNEXT
+        NULLSWAPIFNOT2
+        DUP
+        IF:<{
+          s0 s2 XCHG
+          297 PUSHINT
+          SDSKIPFIRST
+          64 LDU
+          DROP
+          s1 s3 XCHG
+          ADD
+          s0 s2 XCHG
+        }>ELSE<{
+          s2 POP
+        }>
+        SWAP
+        NOT
       }>
-      s3 POP
+      DROP
+      balance CALLDICT
+      SWAP
+      SUB
+      DUP
+      0 GTINT
+      IF:<{
+        0 PUSHINT
+        196 PUSHINT
+        NEWC
+        9 STU
+        s0 s6 XCHG
+        264 PUSHINT
+        LDSLICEX
+        DROP
+        s1 s6 XCHG
+        STSLICER
+        SWAP
+        STGRAMS
+        s1 s4 XCHG
+        108 STU
+        ENDC
+        2 PUSHINT
+        SENDRAWMSG
+      }>ELSE<{
+        DROP
+        s3 POP
+      }>
     }>ELSE<{
       s3 POP
     }>
@@ -298,6 +343,37 @@ PROGRAM{
       1 PUSHINT
     }>
     2 PUSHINT
+  }>
+  earning PROC:<{
+    orders CALLDICT
+    1000000000 PUSHINT
+    -1 PUSHINT
+    UNTIL:<{
+      s2 PUSH
+      32 PUSHINT
+      DICTUGETNEXT
+      NULLSWAPIFNOT2
+      DUP
+      IF:<{
+        s0 s2 XCHG
+        297 PUSHINT
+        SDSKIPFIRST
+        64 LDU
+        DROP
+        s1 s3 XCHG
+        ADD
+        s0 s2 XCHG
+      }>ELSE<{
+        s2 POP
+      }>
+      SWAP
+      NOT
+    }>
+    DROP
+    NIP
+    balance CALLDICT
+    SWAP
+    SUB
   }>
   data PROC:<{
     orders CALLDICT

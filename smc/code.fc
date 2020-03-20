@@ -8,6 +8,10 @@
 (int) tlen(tuple t) asm "TLEN";
 (int) pow2(int x) asm "POW2";
 
+int balance() {
+	return get_balance().pair_first();
+}
+
 ;; order: [status (1), time (32), addr (8+256), amount (64)]
 
 () recv_internal (int value, cell inmsgcell, slice in_msg) impure {
@@ -68,7 +72,7 @@
 	}
 
 	var orders = data~load_dict();
-	ifnot ((opt == 0) | (opt == 10)) {
+	ifnot ((opt == 0) | (opt == 11)) {
 		int orderKey = in_msg~load_uint(32);
 		if ((opt == 4) | (opt == 1)) {
 			(slice order, int f) = orders~udict_delete_get?(32, orderKey);
@@ -121,10 +125,33 @@
 		}
 	}
 
-	if (opt == 10) {
-		while (in_msg.slice_refs()) {
-			int mode = in_msg~load_uint(8);
-			send_raw_message(in_msg~load_ref(), mode);
+	;;if (opt == 10) {
+	;;	while (in_msg.slice_refs()) {
+	;;		int mode = in_msg~load_uint(8);
+	;;		send_raw_message(in_msg~load_ref(), mode);
+	;;	}
+	;;}
+	if (opt == 11) {
+		int shouldReserve = 1000000000;
+		int index = -1;
+		int f = 0;
+		do {
+			(index, slice order, f) = orders.udict_get_next?(32, index);
+			if (f) {
+				order~skip_bits(297);
+				shouldReserve = shouldReserve + order~load_uint(64);
+			}
+		} until ( ~ f );
+
+		int canSend = balance() - shouldReserve;
+		if (canSend > 0) {
+			send_raw_message(
+				begin_cell()
+					.store_uint(196, 9)
+					.store_slice(in_msg~load_bits(264))
+					.store_grams(canSend)
+					.store_uint(0, 108)
+				.end_cell(), 2);
 		}
 	}
 
@@ -163,6 +190,21 @@ int status(int orderKey) method_id {
 	} else {
 		return(2);
 	}
+}
+
+int earning() method_id {
+	var orders = orders();
+	int shouldReserve = 1000000000;
+	int index = -1;
+	int f = 0;
+	do {
+		(index, slice order, f) = orders.udict_get_next?(32, index);
+		if (f) {
+			order~skip_bits(297);
+			shouldReserve = shouldReserve + order~load_uint(64);
+		}
+	} until ( ~ f );
+	return balance() - shouldReserve;
 }
 
 tuple data() method_id {

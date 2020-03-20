@@ -584,6 +584,17 @@ export default (
         chat.send(order.id, 0, JSON.stringify({
             id: "auto-refund"
         }));
+        let seller = await db.findSellerById(order.seller_id);
+        let buyer = await db.findBuyerById(order.buyer_id);
+        bot.sendMessage(seller.telegram_id, TEXTS.autoRefundNoitificationSeller({
+            from_name: buyer.name,
+            order_id: order.id,
+            order_token: order.seller_token
+        }));
+        bot.sendMessage(buyer.telegram_id, TEXTS.autoRefundNoitificationBuyer({
+            order_id: order.id,
+            order_token: order.buyer_token
+        }));
         onOrderComplete(order.id, false);
     });
 
@@ -633,7 +644,7 @@ export default (
             return;
         await onCancel(message.from);
     });
-    bot.onText(/\/remove/, async (message) => {
+    bot.onText(/^\s*\/remove\s*$/, async (message) => {
         if (!message.from)
             return;
         await onRemoveShop(message.from);

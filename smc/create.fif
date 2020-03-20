@@ -17,12 +17,24 @@ null =: libraries
 	// 0 8 i, x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
 b> =: msg
 <b
+	1 16 u,
+	// hash 64 u,
+	-1 8 i, x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
+b> =: msg2
+<b
 	<b 
 		0 8 u,
 		msg <s shash priv ed25519_sign B,
 		msg <s s,
 	b> ref,
 b> =: message
+<b 
+	<b
+		11 8 u,
+		msg2 <s shash priv ed25519_sign B,
+		msg2 <s s,
+	b> ref,
+b> =: message2
 
 <b
  	pub B,
@@ -49,7 +61,9 @@ constant c7
 	x{112DB9318AB23350C17DA38C18777C471270A1D6167659A8C4FEDAAC6A29D008} s,
  	10 Gram, b{00} s, b> constant meta */
 
-message <s recv_external code <s storage c7 runvmctx .s
+message <s recv_external code <s storage c7 runvmctx 
+.s
+// message2 <s recv_external code <s storage c7 runvmctx .s
 // 10000000000 meta <b "Hello world" $, b> <s recv_internal code <s storage c7 runvmctx
 // 100194 code <s storage c7 runvmctx
 // drop drop .s
@@ -72,7 +86,5 @@ cr
 file-base +"-query.boc" dup
 ^green ."Creation query saved to " ^reset ^Green type ^reset cr
 external_message boc>B swap B>file
-
-
 
 <b b{1000100} s, wallet_addr addr, 0 Gram, b{00} s, dup bbits swap b> <s csr. . cr

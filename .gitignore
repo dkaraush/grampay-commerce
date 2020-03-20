@@ -10,3 +10,5 @@ smc/contract.addr
 smc/contract-query.boc
 smc/storage.dat
 smc/test.fif
+DATA.boc
+CODE.boc
