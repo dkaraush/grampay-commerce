@@ -590,11 +590,11 @@ export default (
             from_name: buyer.name,
             order_id: order.id,
             order_token: order.seller_token
-        }));
+        }), {parse_mode: "HTML"});
         bot.sendMessage(buyer.telegram_id, TEXTS.autoRefundNoitificationBuyer({
             order_id: order.id,
             order_token: order.buyer_token
-        }));
+        }), {parse_mode: "HTML"});
         onOrderComplete(order.id, false);
     });
 

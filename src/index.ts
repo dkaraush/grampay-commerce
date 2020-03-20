@@ -11,14 +11,16 @@ import * as http from 'http';
 import * as https from 'https';
 import * as fs from 'fs';
 
+const morgan = require('morgan');
+
 const config = JSON.parse(fs.readFileSync('config.json').toString());
 let db = makeDB(config.db);
-
 
 const token = config.telegramToken;
 const bot = new TelegramBot(token, {polling: true});
 
 const app = express();
+app.use(morgan('common'));
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
