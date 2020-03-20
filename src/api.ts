@@ -969,13 +969,8 @@ export default (
             paid: ['💰 ', 'Paid, pending...']
         }
         
-        let ordersText = `Orders: (${
-            seller !== null ? 
-                '<b>' + TEXTS.escapeHTML(seller.title) + '</b> seller' :
-                '<b>' + TEXTS.escapeHTML(buyer.name) + '</b> buyers' 
-            })\n\n`;
-        // if (!actjve)
-        //     ordersText += '/orders_active — show only active orders\n';
+        let ordersText = `</b>Orders:</b>\n`;
+        let buyers = [], sellers = [];
         for (let order of orders) {
             let status = ['', ''];
             if (order.success)
@@ -993,10 +988,20 @@ export default (
             else if (!order.complete && order.paid)
                 status = symbols.paid;
             let isSeller = seller !== null && order.seller_id === seller.id;
+            let isBuyer = buyer !== null && order.buyer_id === buyer.id;
             let link = TEXTS.domain + '/order/?' + (isSeller ? order.seller_token : order.buyer_token);
             let productLink = TEXTS.domain + '/product/' + order.product_id;
-            ordersText += `${status[0]}<a href="${link}"><b>Order #${order.id}</b></a> <i><a href="${productLink}">${TEXTS.escapeHTML(order.product_title)}</a></i>${status[0].length>0?' — ':''}${status[1]}` + '\n';
+            let sellerText = `${status[0]}<a href="${TEXTS.domain}/order/?${order.seller_token}"><b>Order #${order.id}</b></a> <i><a href="${productLink}">${TEXTS.escapeHTML(order.product_title)}</a></i>${status[0].length>0?' — ':''}${status[1]}`;
+            let buyerText = `${status[0]}<a href="${TEXTS.domain}/order/?${order.buyer_token}"><b>Order #${order.id}</b></a> <i><a href="${productLink}">${TEXTS.escapeHTML(order.product_title)}</a></i>${status[0].length>0?' — ':''}${status[1]}`;
+            if (isSeller)
+                sellers.push(sellerText);
+            if (isBuyer)
+                buyers.push(buyerText);
         }
+        if (sellers.length > 0)
+            ordersText += '\n' + (buyers.length > 0 ? 'As a <b>seller</b>:\n' : '') + sellers.join('\n');
+        if (buyers.length > 0)
+            ordersText += '\n' + (sellers.length > 0 ? 'As a <b>buyer</b>:\n' : '') + buyers.join('\n');
 
         bot.sendMessage(user.id, ordersText, {
             parse_mode: "HTML",
