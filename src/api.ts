@@ -64,7 +64,7 @@ export default (
         [ keyboardNewProduct ],
         [ keyboardRemoveShop ]
     ];
-    const cancelOptions ={};//  {reply_markup: {keyboard: [[keyboardCancel]]}};
+    const cancelOptions = {disable_web_page_preview: true};//  {reply_markup: {keyboard: [[keyboardCancel]]}};
 
     app.post('/login-buyer', async (req : any, res : Response<any>) => {
         let productID : number = NaN;
@@ -123,7 +123,7 @@ export default (
             product_id: product.id,
             price_usd: product.price.toFixed(2),
             price_grm: usd2grm(product.price).toFixed(2)
-        }), {disable_notification: true, parse_mode: 'HTML'});
+        }), {disable_notification: true, parse_mode: 'HTML', disable_web_page_preview: true});
         res.json({token});
     });
 
@@ -206,7 +206,7 @@ export default (
             price_usd: usd.toFixed(2),
             price_grm: grm.toFixed(2),
             order_id:  order.id
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
         bot.sendMessage(buyer.telegram_id, TEXTS.openedOrderBuyer({
             seller: seller.title,
             product_id: product.id,
@@ -215,7 +215,7 @@ export default (
             amount_usd: usdWithFee.toFixed(2),
             amount_grm: grmWithFee.toFixed(2),
             order_id:  order.id
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
 
         chat.send(order.id, 0, JSON.stringify({
             id: "init"
@@ -410,7 +410,7 @@ export default (
             token: toBuyer ? order.buyer_token : order.seller_token,
             order_id: order.id,
             product_name: product.title
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
     });
     chat.onProcessOrder(async (order_id: number, fromBuyer: boolean, action : string, rate? : number) => {
         let order = await db.findOrderById(order_id);
@@ -438,7 +438,7 @@ export default (
                     from_type: fromBuyer ? 'buyer' : 'seller',
                     order_token: fromBuyer ? order.seller_token : order.buyer_token,
                     order_id: order.id 
-                }), {parse_mode: "HTML"});
+                }), {parse_mode: "HTML", disable_web_page_preview: true});
             }
         } else if (action === 'confirm' && !fromBuyer) {
             if (order.confirmed)
@@ -450,7 +450,7 @@ export default (
                     from_name: seller.title,
                     order_token: order.buyer_token,
                     order_id: order.id
-                }), {parse_mode: "HTML"});
+                }), {parse_mode: "HTML", disable_web_page_preview: true});
             }
         } else if (action === 'release' && fromBuyer) {
             await bch.release(order.key, seller.address);
@@ -462,7 +462,7 @@ export default (
                     order_id: order.id,
                     order_token: order.seller_token,
                     amount_grm: order.price_grm.toFixed(2)
-                }), {parse_mode: "HTML"});
+                }), {parse_mode: "HTML", disable_web_page_preview: true});
             }
             chat.send(order.id, 0, JSON.stringify({
                 id: "release"
@@ -478,7 +478,7 @@ export default (
                     order_id: order.id,
                     order_token: order.buyer_token,
                     amount_grm: order.amount_grm.toFixed(2)
-                }), {parse_mode: "HTML"});
+                }), {parse_mode: "HTML", disable_web_page_preview: true});
             }
             chat.send(order.id, 0, JSON.stringify({
                 id: "refund"
@@ -497,12 +497,12 @@ export default (
                 (fromBuyer ? TEXTS.youDisputed : TEXTS.theyDisputed)({
                     order_id: order.id,
                     order_token: order.buyer_token
-                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, true)});
+                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, true), disable_web_page_preview: true});
             bot.sendMessage(seller.telegram_id, 
                 (!fromBuyer ? TEXTS.youDisputed : TEXTS.theyDisputed)({
                     order_id: order.id,
                     order_token: order.seller_token
-                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, false)});
+                }), {parse_mode: "HTML", disable_notification: chat.isOnline(order.id, false), disable_web_page_preview: true});
         }
 
         if (action === 'feedback' && typeof rate === 'number') {
@@ -558,7 +558,7 @@ export default (
             from_name: buyer.name,
             order_token: order.seller_token,
             order_id: order.id
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
         bot.sendMessage(buyer.telegram_id, TEXTS.payNotificationBuyer({
             product_id: product.id,
             product_name: product.title,
@@ -571,7 +571,7 @@ export default (
             total_grm: order.amount_grm.toFixed(2),
             order_id: order.id,
             order_token: order.buyer_token
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
     });
     bch.whenRefund(async (order_id: number) => {
         let order = await db.findOrderById(order_id);
@@ -591,11 +591,11 @@ export default (
             from_name: buyer.name,
             order_id: order.id,
             order_token: order.seller_token
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
         bot.sendMessage(buyer.telegram_id, TEXTS.autoRefundNoitificationBuyer({
             order_id: order.id,
             order_token: order.buyer_token
-        }), {parse_mode: "HTML"});
+        }), {parse_mode: "HTML", disable_web_page_preview: true});
         onOrderComplete(order.id, false);
     });
 
@@ -604,7 +604,7 @@ export default (
     bot.onText(/\/help/, (message) => {
         if (!message.from)
             return;
-        bot.sendMessage(message.from.id, TEXTS.help());
+        bot.sendMessage(message.from.id, TEXTS.help(), {disable_web_page_preview: true});
     });
     bot.onText(/\/info|\/shop/, async (message) => {
         if (!message.from)
@@ -619,7 +619,7 @@ export default (
 
         let seller = await db.findSellerById(message.from.id, 'telegram_id');
         if (seller === null)
-            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}});
+            return bot.sendMessage(message.from.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}, disable_web_page_preview: true});
 
         let match = message.text.match(/\/remove_(\d+)/);
         if (match === null || match.length < 2)
@@ -628,12 +628,12 @@ export default (
 
         let product = await db.findProductById(id);
         if (product === null)
-            return bot.sendMessage(message.from.id, TEXTS.productWasNotFound({id: id}), {reply_markup: {keyboard: sellerKeyboard}});
+            return bot.sendMessage(message.from.id, TEXTS.productWasNotFound({id: id}), {reply_markup: {keyboard: sellerKeyboard}, disable_web_page_preview: true});
         if (product.seller !== seller.id)
-            return bot.sendMessage(message.from.id, TEXTS.productIsNotYours({id: id}), {reply_markup: {keyboard: sellerKeyboard}});
+            return bot.sendMessage(message.from.id, TEXTS.productIsNotYours({id: id}), {reply_markup: {keyboard: sellerKeyboard}, disable_web_page_preview: true});
 
         await db.query(`UPDATE product SET deleted=1 WHERE id=${id}`);
-        bot.sendMessage(message.from.id, TEXTS.productWasRemoved(), {reply_markup: {keyboard: sellerKeyboard}});
+        bot.sendMessage(message.from.id, TEXTS.productWasRemoved(), {reply_markup: {keyboard: sellerKeyboard}, disable_web_page_preview: true});
     });
     bot.onText(/\/add_product/, async (message) => {
         if (!message.from)
@@ -667,9 +667,9 @@ export default (
             await onShopCreating(user);
         } else if (query.data === 'd' || query.data === 'p') {
             if (await db.findSellerById(user.id, 'telegram_id') !== null)
-                return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}});
+                return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}, disable_web_page_preview: true});
             state.set(user.id, {id: 'shop_desc', is_digital: query.data==='d'});
-            bot.sendMessage(user.id, TEXTS.askDescription());
+            bot.sendMessage(user.id, TEXTS.askDescription(), {disable_web_page_preview: true});
         }
     });
     bot.on('message', async (message, metadata) => {
@@ -756,7 +756,7 @@ export default (
                                 price_grm: usd2grm(userState.price).toFixed(2)
                             }), {parse_mode: "HTML", reply_markup: {
                                 keyboard: sellerKeyboard
-                            }});
+                            }, disable_web_page_preview: true});
                         });
                     }).on('error', (e) => {
                         error(e);
@@ -780,7 +780,7 @@ export default (
                 userState.description = description;
                 state.set(user.id, userState);
 
-                bot.sendMessage(user.id, TEXTS.askAddress(), {parse_mode: "HTML"});
+                bot.sendMessage(user.id, TEXTS.askAddress(), {parse_mode: "HTML", disable_web_page_preview: true});
             } else if (userState && userState.id === 'shop_address') {
                 let address = message.text;
                 const bad = () => bot.sendMessage(user.id, TEXTS.badAddress(), cancelOptions);
@@ -820,7 +820,8 @@ export default (
                     parse_mode: "HTML",
                     reply_markup: {
                         keyboard: sellerKeyboard
-                    }
+                    },
+                    disable_web_page_preview: true
                 });
             } else if (userState && userState.id === 'shop_type') {
                 if (message.text !== TEXTS.shopTypeDigitalButton() && message.text !== TEXTS.shopTypePhysicalButton())
@@ -828,18 +829,19 @@ export default (
                            [{text: TEXTS.shopTypeDigitalButton()}, 
                             {text: TEXTS.shopTypePhysicalButton()}], 
                            [ keyboardCancel ]
-                    ]}});
+                    ]}, disable_web_page_preview: true});
                 if (await db.findSellerById(user.id, 'telegram_id') !== null)
-                    return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}});
+                    return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {reply_markup: {keyboard:sellerKeyboard}, disable_web_page_preview: true});
                 state.set(user.id, {id: 'shop_desc', is_digital: message.text === TEXTS.shopTypeDigitalButton()});
-                bot.sendMessage(user.id, TEXTS.askDescription());
+                bot.sendMessage(user.id, TEXTS.askDescription(), {disable_web_page_preview: true});
             } else {
                 bot.sendMessage(user.id, TEXTS.welcome(), {
                     reply_markup: {
                         inline_keyboard: [
                             [ {text: keyboardCreateShop.text, callback_data: "create_shop"} ]
                         ]
-                    }
+                    },
+                    disable_web_page_preview: true
                 });
             } 
         }
@@ -856,31 +858,33 @@ export default (
         bot.sendMessage(user.id, TEXTS.cancelled(), {
             reply_markup: {
                 keyboard
-            }
+            },
+            disable_web_page_preview: true
         });
     }
 
     async function onRemoveShop(user : TelegramBot.User) {
         let seller = await db.findSellerById(user.id, 'telegram_id');
         if (seller === null)
-            return bot.sendMessage(user.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}});
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop(), {reply_markup: {keyboard: [[keyboardCreateShop]]}, disable_web_page_preview: true});
         
         let openOrders = await db.query(`SELECT id FROM \`order\` WHERE seller_id=${seller.id} AND complete=0 LIMIT 1`);
         if (openOrders.length > 0)
-            return bot.sendMessage(user.id, TEXTS.hasOpenOrders(), {reply_markup: {keyboard: sellerKeyboard}});
+            return bot.sendMessage(user.id, TEXTS.hasOpenOrders(), {reply_markup: {keyboard: sellerKeyboard}, disable_web_page_preview: true});
             
         await db.query(`DELETE FROM \`product\` WHERE seller=${seller.id}`);
         await db.query(`DELETE FROM \`seller\` WHERE id=${seller.id}`);
         return bot.sendMessage(user.id, TEXTS.shopRemoved(), {
             reply_markup: {
                 keyboard: [ [ keyboardCreateShop ] ]
-            }
+            },
+            disable_web_page_preview: true
         });
     }
     
     async function onShopCreating(user : TelegramBot.User) {
         if (await db.findSellerById(user.id, 'telegram_id') !== null)
-            return bot.sendMessage(user.id, TEXTS.alreadyHaveShop());
+            return bot.sendMessage(user.id, TEXTS.alreadyHaveShop(), {disable_web_page_preview: true});
 
         state.set(user.id, {id: "shop_type"});
         bot.sendMessage(user.id, TEXTS.askShopType(), {
@@ -894,14 +898,15 @@ export default (
                     [{text: TEXTS.shopTypeDigitalButton(), callback_data: 'd'}, 
                      {text: TEXTS.shopTypePhysicalButton(), callback_data: 'p'}]
                 ]
-            }
+            },
+            disable_web_page_preview: true
         });
     }
 
     async function onShopInfo(user : TelegramBot.User) {
         let seller = await db.findSellerById(user.id, 'telegram_id');
         if (seller === null)
-            return bot.sendMessage(user.id, TEXTS.doesntHaveShop());
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop(), {disable_web_page_preview: true});
         
         let products = await db.query(`SELECT * FROM product WHERE seller=${seller.id} AND deleted=0`);
         bot.sendMessage(user.id, TEXTS.info({
@@ -914,16 +919,16 @@ export default (
             id: product.id
         })).join('\n'), {parse_mode: "HTML", reply_markup: {
             keyboard: sellerKeyboard
-        }});
+        }, disable_web_page_preview: true});
     }
 
     async function onAddProduct(user: TelegramBot.User) {
         let seller = await db.findSellerById(user.id, 'telegram_id');
         if (seller === null)
-            return bot.sendMessage(user.id, TEXTS.doesntHaveShop());
+            return bot.sendMessage(user.id, TEXTS.doesntHaveShop(), {disable_web_page_preview: true});
         
         state.set(user.id, {id: "product_title"});
-        bot.sendMessage(user.id, TEXTS.askProductTitle());
+        bot.sendMessage(user.id, TEXTS.askProductTitle(), {disable_web_page_preview: true});
     }
 
     async function onOrdersShow(user : TelegramBot.User, active : boolean = false) {
@@ -932,7 +937,7 @@ export default (
         let buyer = await db.findBuyerById(user.id, 'telegram_id');
 
         if (seller === null && buyer === null)
-            return bot.sendMessage(user.id, TEXTS.noOrders());
+            return bot.sendMessage(user.id, TEXTS.noOrders(), {disable_web_page_preview: true});
         
         let orders = await db.query(`
             SELECT order.id as 'id', 
@@ -958,7 +963,7 @@ export default (
         // let orders = await db.query(`SELECT * FROM \`order\` WHERE 
         //                             ${conditions.join(' AND ')} LIMIT 100`);
         if (orders.length == 0)
-            return bot.sendMessage(user.id, TEXTS.noOrders());
+            return bot.sendMessage(user.id, TEXTS.noOrders(), {disable_web_page_preview: true});
 
         const symbols = {
             done: ['✅ ', 'Successfully done.'],
@@ -1008,7 +1013,8 @@ export default (
             parse_mode: "HTML",
             reply_markup: (seller !== null ? {
                 keyboard: sellerKeyboard
-            } : {keyboard: [[]]})
+            } : {keyboard: [[]]}),
+            disable_web_page_preview: true
         });
     }
 };
