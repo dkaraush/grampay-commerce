@@ -1001,7 +1001,7 @@ export default (
         if (sellers.length > 0)
             ordersText += '\n' + (buyers.length > 0 ? 'As a <b>seller</b>:\n' : '') + sellers.join('\n');
         if (buyers.length > 0)
-            ordersText += '\n' + (sellers.length > 0 ? 'As a <b>buyer</b>:\n' : '') + buyers.join('\n');
+            ordersText += '\n' + (sellers.length > 0 ? '\nAs a <b>buyer</b>:\n' : '') + buyers.join('\n');
 
         bot.sendMessage(user.id, ordersText, {
             parse_mode: "HTML",
