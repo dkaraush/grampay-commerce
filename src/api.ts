@@ -528,14 +528,11 @@ export default (
         chat.send(order_id, 0, JSON.stringify({
             id: "ask-feedback"
         }));
-        if (success) {
-            let order = await db.findOrderById(order_id);
-            let buyer = await db.findBuyerById(order.buyer_id);
-            let seller = await db.findSellerById(order.seller_id);
+    }
 
-            await db.query(`UPDATE \`buyer\` SET purchases=purchases+1 WHERE id=${buyer.id}`);
-            await db.query(`UPDATE \`seller\` SET trades_count=trades_count+1 WHERE id=${seller.id}`);
-        }
+    async function incrementOrdersCount(buyer_id : number, seller_id: number) {
+        await db.query(`UPDATE \`buyer\` SET purchases=purchases+1 WHERE id=${buyer_id}`);
+        await db.query(`UPDATE \`seller\` SET trades_count=trades_count+1 WHERE id=${seller_id}`);
     }
 
     bch.whenPaymentDone(async (order_id:number, escrow_time:number) => {
@@ -572,6 +569,7 @@ export default (
             order_id: order.id,
             order_token: order.buyer_token
         }), {parse_mode: "HTML", disable_web_page_preview: true});
+        incrementOrdersCount(buyer.id, seller.id);
     });
     bch.whenRefund(async (order_id: number) => {
         let order = await db.findOrderById(order_id);
