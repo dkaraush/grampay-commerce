@@ -11,6 +11,7 @@ In case of GramPay Commerce, we have the third side, which decides whether Grams
 So, what's the point? Well, my goal was to maximize clarity and security, of the smart-contract and a service itself. My goals were to:
  - Save paid and not finished orders in blockchain.
  - Make a clarity of automatic refund: if order was expired, give an ability to make a refund without GramPay interventions.
+ - Guarantee, that money can't be taken, until orders aren't finished.
 
 So, having a history of the whole blockchain and knowing the code of the smart-contract, we can reproduce what happened with exact orders and what GramPay did with them. Bad things with orders would obviously worsen its reputation.
 
@@ -28,10 +29,13 @@ I came up with such "order flow" scheme:
     - **Refund the order**: seller asks server to refund money back to the buyer.
     - **Auto-refund**: order wasn't sent (and not frozen) until some amount of time and anybody can send a message (without a signature) to refund this order.
     - **Freeze**: in case of dispute, auto-refund is cancelled and only GramPay can decide what to do.
+3. Owner of the smart-contract can take earnings from fees only from finished orders (removed from storage).
 
 Pros and cons:
 
 **+** Orders are saved clearly in blockchain.
+
+**+** Smart-contract guarantees, that money can't be taken out from unfinished order. 
 
 **+** Auto-refund guarantees, that anyone can ask smart-contract to take back funds and GramPay server is not needed (but is used now).
 
@@ -48,6 +52,8 @@ To be more precise, order ID = SHA256(inner_internal_message.cellData) & 0xfffff
 
 For example, "test" => x{0000000074657374} => 274DA87ADB56666DDD79E8E2EE116DBF992C73B45636C41B681914CDB442B6A2 => 3024271010
 
+Also, smart-contract guarantees, that money can't be taken out from it, until order will be finished (removed from storage).
+
 Other more boring and technical stuff is described here:
 
 External message:
@@ -58,12 +64,12 @@ External message:
     - 2 = Release (send to specific address)
     - 3 = Freeze (set status of saved order to 0)
     - 4 = Auto-refund
-    - 10 = Send raw message
+    - 11 = Send all earnings income to another address
 [uint256] signature of message (if opt != 4)
 {
     [uint16] seqno
-    [uint32] order ID (if opt != 0 && opt != 10)
-    [int8 + uint256] address where to release (if opt == 2)
+    [uint32] order ID (if opt != 0 && opt != 11)
+    [int8 + uint256] address where to release (if opt == 2 || opt == 11)
 } : message
 ```
 **Fun fact**: before writing this document, seqno was out of message. I understood, that leaving only order ID in message actually gives an ability to send another messages with the same order ID without having the private key. For example, if `freeze` is sent with only order id and `refund` is also sent with order id only, in this case signatures would be the same and private key is not needed. Fixed. :P
@@ -71,6 +77,8 @@ External message:
 Get-methods:
 ```
 seqno() => number
+earning() => number
+    Returns amount of nanograms (-1 Gram to stay contract alive), that are not orders (fees income).
 status(number) => number
     Returns status of the order.
     = -1  - not found in list
@@ -85,5 +93,3 @@ data() => tuple[tuple[number, ...]]:
     [slice]  address (source of payment)
     [number] amount in nanograms (98% isn't calcuted, in case of refund)
 ```
-
-**TODO**: guarantee, that funds can't be removed by `opt=10`. I thought about counting each order amount to limit transactions, but didn't have enough time for that, sorry. Taking GramPay fee from the contract is quite important.
