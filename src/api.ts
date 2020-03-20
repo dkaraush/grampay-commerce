@@ -969,7 +969,7 @@ export default (
             paid: ['💰 ', 'Paid, pending...']
         }
         
-        let ordersText = `</b>Orders:</b>\n`;
+        let ordersText = `<b>Orders:</b>\n`;
         let buyers = [], sellers = [];
         for (let order of orders) {
             let status = ['', ''];
