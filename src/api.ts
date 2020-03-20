@@ -82,7 +82,8 @@ export default (
                                     .join('\n');
 
         if (hmac_sha256(secret, dataCheckString).toString('hex') !== req.body.hash) {
-            error('failed to validate')
+            error('failed to validate:', dataCheckString);
+            error('received:', req.body);
             res.status(400).end();
             return;
         }
