@@ -15,7 +15,7 @@ So, what's the point? Well, my goal was to maximize clarity and security, of the
 
 So, having a history of the whole blockchain and knowing the code of the smart-contract, we can reproduce what happened with exact orders and what GramPay did with them. Bad things with orders would obviously worsen its reputation.
 
-I could go further and try to make all service on-chain, by putting chat and all dispute logic in blockchain itself, but who will pay such fees for that? Obviously to say, that paying fees depending on message length is a bad idea. I have learned a lesson, with "Because I can!" logic in Stage 2.
+I could go further and try to make all service on-chain, by putting chat and all dispute logic in blockchain itself, but who will pay such fees for that? Obviously to say, that paying fees depending on message length is a bad idea. I have learned a lesson, with ["Because I can!" logic](https://github.com/dkaraush/ton-web/blob/master/ReadMe.txt) in Stage 2.
 
 
 ## Smart-contract Idea
