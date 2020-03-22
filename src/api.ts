@@ -280,6 +280,8 @@ export default (
         });
         if (product.image instanceof Buffer)
             product.image = product.image.toString('base64');
+        if (product.deleted)
+            return res.status(404);
         res.json({product, seller, rate: usd2grm(1), fee});
     });
     app.get('/shop', async (req : any, res : Response<any>) => {
