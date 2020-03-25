@@ -25,3 +25,5 @@ To test out, there are already some demonstrational shops:
 - https://grampay.org/shop/dkaraush
 - https://grampay.org/shop/ceosvex
 - https://grampay.org/shop/jekapena
+
+⚠️ Currently working only with official TON Wallet (wallet.ton.org) ⚠️
