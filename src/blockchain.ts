@@ -25,7 +25,7 @@ interface OrderInfo {
     token: string
 }
 
-const randomToken = (n : number = 5, q : string = "qwertyuiopasdfghjklzxcvbnm") : string => 
+const randomToken = (n : number = 16, q : string = "qwertyuiopasdfghjklzxcvbnm") : string => 
     Array.from({length: n}, () => q[Math.round(Math.random() * (q.length - 1))]).join('');
 
 
@@ -190,7 +190,7 @@ export default async (config : any, db: Database) : Promise<Blockchain> => {
         } catch(e) {error(e)}
 
         log('scheduled next loop()...')
-        setTimeout(loop, 3000);
+        setTimeout(loop, 6000);
     }
     loop();
     updateOrdersList();

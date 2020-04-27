@@ -41,37 +41,48 @@ PROGRAM{
     DICTUGET
     NULLSWAPIFNOT
     0 PUSHINT
-    SWAP
+    NOW
+    14400 PUSHINT
+    ADD
+    s0 s2 XCHG
     IF:<{
-      DROP
+      2DROP
       1 LDU
       SWAP
       90 THROWIFNOT
-      296 PUSHINT
+      1 PUSHINT
       SDSKIPFIRST
+      32 LDU
+      8 LDI
+      256 LDU
+      s2 s7 XCPU
+      EQUAL
+      91 THROWIFNOT
+      s5 PUSH
+      EQUAL
+      92 THROWIFNOT
       64 LDU
       DROP
+      SWAP
     }>ELSE<{
-      NIP
+      s2 POP
     }>
-    s0 s6 XCHG2
-    ADD
-    NOW
-    14400 PUSHINT
+    s0 s7 XCHG
     ADD
     1 PUSHINT
     NEWC
     1 STU
+    s1 s7 XCHG
     32 STU
     s1 s4 XCHG
     8 STI
     s1 s2 XCHG
     256 STU
-    s1 s2 XCHG
+    s1 s4 XCHG
     64 STU
     ENDC
     CTOS
-    2SWAP
+    s0 s2 XCHG
     32 PUSHINT
     DICTUSET
     NEWC
@@ -139,15 +150,15 @@ PROGRAM{
         s6 PUSH
         4 EQINT
         IF:<{
+          DUP
+          52 THROWIFNOT
           SWAP
           1 LDU
-          s2 PUSH
-          52 THROWIFNOT
           SWAP
           53 THROWIFNOT
           32 LDU
+          SWAP
           NOW
-          s1 s2 XCHG
           LESS
           54 THROWIFNOT
           ACCEPT
