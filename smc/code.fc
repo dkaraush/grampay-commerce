@@ -28,22 +28,25 @@ int balance() {
 	int hash = string_hash(in_msg) & 0xffffffff;
 	(slice order, int f) = orders.udict_get?(32, hash);
 	int s = 0;
+	int t = now() + 14400; ;; 4 hours
 	if (f) {
 		throw_unless(90, order~load_uint(1));
-		order~skip_bits(296);
+		order~skip_bits(1);
+		t = order~load_uint(32);
+		order~skip_bits(264);
 		s = order~load_uint(64);
 	}
-	orders~udict_set(32, 
-						hash, 
+	orders~udict_set(32, hash, 
 						begin_parse(
-						begin_cell()
-							.store_uint(1, 1)
-							.store_uint(now() + 14400, 32) ;; 4 hours
-							.store_int(src_wc, 8)
-							.store_uint(src_addr, 256)
-							.store_uint(s + value, 64)
-						.end_cell()
-						));
+							begin_cell()
+								.store_uint(1, 1)
+								.store_uint(t, 32)
+								.store_int(src_wc, 8)
+								.store_uint(src_addr, 256)
+								.store_uint(s + value, 64)
+							.end_cell()
+						)	
+					);
 	set_data(
 		begin_cell()
 			.store_slice(start)
@@ -78,8 +81,8 @@ int balance() {
 			(slice order, int f) = orders~udict_delete_get?(32, orderKey);
 
 			if (opt == 4) {
-				int status = order~load_uint(1);
 				throw_unless(52, f);
+				int status = order~load_uint(1);
 				throw_unless(53, status);
 				throw_unless(54, order~load_uint(32) < now());
 				accept_message();
