@@ -33,9 +33,13 @@ int balance() {
 		throw_unless(90, order~load_uint(1));
 		order~skip_bits(1);
 		t = order~load_uint(32);
-		order~skip_bits(264);
+		int wc = order~load_int(8);
+		int addr = order~load_uint(256);
+		throw_unless(91, wc == src_wc);
+		throw_unless(92, addr == src_addr);
 		s = order~load_uint(64);
 	}
+
 	orders~udict_set(32, hash, 
 						begin_parse(
 							begin_cell()
