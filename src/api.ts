@@ -249,8 +249,8 @@ export default (
         let productRes = await db.query(`
             SELECT product.id as 'product.id', 
                    product.title as 'product.title', 
-                   product.image as 'product.image',
-                   product.image_prefix as 'product.image_prefix',
+                   `+/*product.image as 'product.image',
+                   product.image_prefix as 'product.image_prefix',*/`
                    product.price as 'product.price',
                    product.count as 'product.count',
                    product.deleted as 'product.deleted',
@@ -278,8 +278,7 @@ export default (
             if (k.startsWith('seller.'))
                 seller[k.substring(7)] = productRes[k];
         });
-        if (product.image instanceof Buffer)
-            product.image = product.image.toString('base64');
+        product.image = '/prodpic?id=' + product.id;
         if (product.deleted)
             return res.status(404);
         res.json({product, seller, rate: usd2grm(1), fee});
@@ -302,9 +301,8 @@ export default (
         res.json({
             seller: filter(seller, ['id', 'telegram_id', 'title', 'link', 'description', 'rate_sum', 'rate_count', 'trades_count']),
             products: products.map((product : any) => {
-                let o = filter(product, ['id', 'title', 'image', 'image_prefix', 'price']);
-                if (o.image)
-                    o.image = o.image.toString('base64');
+                let o = filter(product, ['id', 'title', 'price']);
+                o.image = '/prodpic?id=' + o.id;
                 return o;
             }),
             rate: usd2grm(1)
@@ -329,8 +327,6 @@ export default (
             seller =  await db.findSellerById(order.seller_id);
         if (product === null || buyer === null || seller === null)
             return res.status(404).end();
-        if (product.image instanceof Buffer)
-            product.image = product.image.toString('base64');
 
         let isBuyer = order.buyer_token == req.query.token;
 
@@ -341,7 +337,7 @@ export default (
         res.json(Object.assign(
             filter(order, filterKeys),
             {
-                product: filter(product, ['id', 'title', 'image', 'image_prefix', 'price']),
+                product: Object.assign(filter(product, ['id', 'title', 'price']), {image: '/prodpic?id=' + product.id}),
                 buyer: filter(buyer, ['id', 'telegram_id', 'name', 'link', 'purchases', 'rate_sum', 'rate_count']),
                 seller: filter(seller, ['id', 'telegram_id', 'title', 'link', 'trades_count', 'rate_sum', 'rate_count']),
                 rate: usd2grm(1),
@@ -349,6 +345,19 @@ export default (
                 who: isBuyer ? 'buyer' : 'seller'
             }
         ));
+    });
+
+    app.get('/prodpic', async (req: any, res: Response<any>) => {
+        if (typeof req.query.id !== 'string')
+            return res.status(400).end();
+        let id = parseInt(req.query.id);
+        if (isNaN(id))
+            return res.status(400).end();
+        let product = await db.findProductById(id);
+        if (product === null)
+            return res.status(404).end();
+
+        res.end(product.image);
     });
 
     app.get('/userpic', async (req: any, res: Response<any>) => {
