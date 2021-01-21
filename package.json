@@ -44,7 +44,7 @@
     "morgan": "^1.9.1",
     "mysql": "^2.18.1",
     "node-telegram-bot-api": "^0.40.0",
-    "socket.io": "^2.3.0",
+    "socket.io": "^2.4.0",
     "ton.js": "^0.1.37",
     "tonweb": "0.0.3",
     "tonweb-boc": "0.0.3",
