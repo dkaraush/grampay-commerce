@@ -37,7 +37,7 @@
     "bigint-buffer": "^1.1.5",
     "colors": "^1.4.0",
     "ed25519": "0.0.4",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "fs": "0.0.1-security",
     "http": "0.0.0",
     "mkdirp": "^1.0.3",
